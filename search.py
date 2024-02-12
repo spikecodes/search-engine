@@ -8,7 +8,6 @@ class SearchEngine:
         self.index = defaultdict(list)
 
     def read_documents(self, filename):
-        documents = []
         # Pulls the documents from index.txt and stores them in a list. If index.txt does not exist, throws an error.
         try:
             with open(filename + '.zz', 'rb') as f:
@@ -48,13 +47,10 @@ class SearchEngine:
             results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
             return results
 
-if __name__ == '__main__':
+def run(query):
     # Initialize and populate the search engine
     search_engine = SearchEngine()
     search_engine.read_documents('index.txt')
-
-    # Perform a search using user input
-    query = input('Enter a search query: ')
 
     start_time=time.time()
 
@@ -66,6 +62,4 @@ if __name__ == '__main__':
     num_results = len(results)
     top_20_results = results[:20]
 
-    print(f"{num_results} results in {time_taken:.3f} seconds")
-    for i, (doc_path, score) in enumerate(top_20_results):
-        print(f'{i+1}. Score: {score:.2f} for {doc_path}')
+    return (time_taken, num_results, top_20_results)

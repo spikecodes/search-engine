@@ -112,7 +112,7 @@ class InvertedIndex:
         with open(filename + '.zz', 'wb') as f:
             f.write(compressed)
 
-if __name__ == '__main__':
+def generate():
     # Initialize and populate the inverted index (example)
     index = InvertedIndex()
 
