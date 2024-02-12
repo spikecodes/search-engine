@@ -5,3 +5,7 @@ For Project 3 of CS 121, we were tasked with creating a search engine. The assig
 #html tags as an indicator of importance
 #Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 #Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
+
+## How did we go above and beyond?
+
+We used zlib to compress and decompress the object, providing a near-100x difference in storage space.

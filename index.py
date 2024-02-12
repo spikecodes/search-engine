@@ -71,10 +71,12 @@ class InvertedIndex:
                         else:
                             term_importance[token] = weight
 
-            # Calculate TF for each term and update index and doc lengths
+            # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
                 tf = count / len(tokens)
-                self.index[term].append((doc_id, tf))
+                # Weight the score with the tf and the importance of the word
+                score = tf + term_importance[token]
+                self.index[term].append((doc_id, score))
 
     def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values
