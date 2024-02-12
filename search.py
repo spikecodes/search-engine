@@ -34,15 +34,14 @@ class SearchEngine:
             # Rank documents based on the query
             count = 0
             scores = defaultdict(float)
-            for term in query.split():
-                if term in self.index:
-                    for doc_id, tfidf in self.index[term].items():
-                        doc_url = documents[doc_id] # Resolve doc_id to the path
-                        scores[doc_url] += tfidf
-                        count += 1
+            if query in self.index:
+                for doc_id, tfidf in self.index[query].items():
+                    doc_url = documents[doc_id] # Resolve doc_id to the path
+                    scores[doc_url] += tfidf
+                    count += 1
 
-                        if count == 20:
-                            break;
+                    if count == 20:
+                        break;
             
             # Sort the documents by score
             sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)

@@ -39,8 +39,17 @@ class InvertedIndex:
             texts = soup.get_text(" ", strip=True)
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalpha() and word.lower() not in stop_words]
 
+            # If tokens is a one element array, 
+            if len(tokens) == 1:
+                bigrams = [tokens[0]]
+            else:
+                bigrams = list(nltk.ngrams(tokens, 2))
+                bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in bigrams]
+
             # Raw count of term in the document
             term_count = defaultdict(int)
+            for bigram in bigrams:
+                term_count[bigram] += 1
             for token in tokens:
                 term_count[token] += 1
 
