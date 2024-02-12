@@ -12,6 +12,7 @@ nltk.download('stopwords')
 
 stop_words = set(stopwords.words('english'))
 unique_words = set()
+unique_doc_ids = set()
 
 TAG_WEIGHTS = {
                 'title': 10,
@@ -41,12 +42,19 @@ class InvertedIndex:
             texts = soup.get_text(" ", strip=True)
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalpha() and word.lower() not in stop_words]
 
-            # If tokens is a one element array, 
-            if len(tokens) == 1:
+            if len(tokens) == 0:
+                # If no tokens on page, exit
+                return;
+            elif len(tokens) == 1:
+                # If only one token, use that
                 bigrams = [tokens[0]]
             else:
+                # If more than one token, split into 2-grams
                 bigrams = list(nltk.ngrams(tokens, 2))
                 bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in bigrams]
+
+            # Store document id in unique_doc_ids for analytics
+            unique_doc_ids.add(doc_id)
 
             # Raw count of term in the document
             term_count = defaultdict(int)
@@ -125,3 +133,4 @@ if __name__ == '__main__':
         index.store_index('index.txt')
 
     print("Unique words: " + str(len(unique_words)))
+    print("Unique Doc IDs: " + str(len(unique_doc_ids)))
