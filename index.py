@@ -10,6 +10,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 
 stop_words = set(stopwords.words('english'))
+unique_words = set()
 
 TAG_WEIGHTS = {
                 'title': 10,
@@ -52,6 +53,7 @@ class InvertedIndex:
                 term_count[bigram] += 1
             for token in tokens:
                 term_count[token] += 1
+                unique_words.add(token)
 
             #ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
@@ -86,8 +88,9 @@ class InvertedIndex:
             postings_json = defaultdict(int)
             for term, postings in self.index.items():
                 for doc_id, score in postings:
-                    postings_json[doc_id] = score
-                f.write(f"{term} — {json.dumps(postings_json)}\n")
+                    postings_json[doc_id] = float(f'{score:.3f}')
+                postings_json_no_spaces = str(json.dumps(postings_json)).replace(' ', '')
+                f.write(f"{term}—{postings_json_no_spaces}\n")
 
 if __name__ == '__main__':
     # Initialize and populate the inverted index (example)
@@ -108,3 +111,5 @@ if __name__ == '__main__':
 
         # Store the index to a file
         index.store_index('index.txt')
+
+    print("Unique words: " + str(len(unique_words)))

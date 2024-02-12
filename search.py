@@ -1,5 +1,6 @@
 from collections import defaultdict
 import json
+import time
 
 class SearchEngine:
     def __init__(self):
@@ -11,7 +12,7 @@ class SearchEngine:
         try:
             with open('index.txt', 'r') as f:
                 for line in f:
-                    term, postings = line.split(' — ')
+                    term, postings = line.split('—')
                 
                     # Remove leading and trailing whitespace
                     term = term.strip()
@@ -32,20 +33,15 @@ class SearchEngine:
             documents = json.load(f)
 
             # Rank documents based on the query
-            count = 0
             scores = defaultdict(float)
             if query in self.index:
                 for doc_id, tfidf in self.index[query].items():
                     doc_url = documents[doc_id] # Resolve doc_id to the path
                     scores[doc_url] += tfidf
-                    count += 1
-
-                    if count == 20:
-                        break;
             
             # Sort the documents by score
-            sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-            return sorted_docs
+            results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            return results
 
 if __name__ == '__main__':
     # Initialize and populate the search engine
@@ -55,7 +51,16 @@ if __name__ == '__main__':
     # Perform a search using user input
     query = input('Enter a search query: ')
 
+    start_time=time.time()
+
     # Print the search results
     results = search_engine.search(query)
-    for i, (doc_path, score) in enumerate(results):
+
+    time_taken=time.time()-start_time
+
+    num_results = len(results)
+    top_20_results = results[:20]
+
+    print(f"{num_results} results in {time_taken:.3f} seconds")
+    for i, (doc_path, score) in enumerate(top_20_results):
         print(f'{i+1}. Score: {score:.2f} for {doc_path}')
