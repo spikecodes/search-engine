@@ -15,6 +15,7 @@ class InvertedIndex:
     def __init__(self):
         # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, tf) tuples
         self.index = defaultdict(list)
+        self.tag_weights = {'h1': 3, 'h2': 3, 'h3': 3, 'p': 1} #Just added most frequent tags for now, we can add more in the future
 
     def add_document(self, doc_id, doc_path):
         # Read the document and tokenize the text
@@ -27,10 +28,22 @@ class InvertedIndex:
             # TODO: Consider the html tags as an indicator of importance, to be stored as metadata 
             # (e.g., <h1> tags could be weighted more heavily than <p> tags)
 
+
             # Count term frequencies in the document
             term_freqs = defaultdict(int)
             for token in tokens:
                 term_freqs[token] += 1
+
+            #ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
+            # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
+            # Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
+            for tag, weight in self.tag_weights.items():
+                elements = soup.find_all(tag)
+                for element in elements:
+                    tag_texts = element.get_text(" ", strip=True)
+                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalpha() and word.lower() not in stop_words]
+                    for token in tag_tokens:
+                        term_freqs[token] += weight
 
             # Calculate TF-IDF for each term and update index and doc lengths
             for term, freq in term_freqs.items():
