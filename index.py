@@ -4,6 +4,7 @@ from nltk.corpus import stopwords
 from collections import defaultdict
 import math
 import json
+import zlib
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -70,7 +71,7 @@ class InvertedIndex:
                         else:
                             term_importance[token] = weight
 
-            # Calculate TF-IDF for each term and update index and doc lengths
+            # Calculate TF for each term and update index and doc lengths
             for term, count in term_count.items():
                 tf = count / len(tokens)
                 self.index[term].append((doc_id, tf))
@@ -83,14 +84,23 @@ class InvertedIndex:
                 self.index[term][i] = (doc_id, tf * idf)
 
     def store_index(self, filename):
+        file_text = ""
+
         # Save the index to a file for later use by search.py
+        postings_json = defaultdict(int)
         with open(filename, 'w') as f:
-            postings_json = defaultdict(int)
             for term, postings in self.index.items():
                 for doc_id, score in postings:
                     postings_json[doc_id] = float(f'{score:.3f}')
                 postings_json_no_spaces = str(json.dumps(postings_json)).replace(' ', '')
-                f.write(f"{term}—{postings_json_no_spaces}\n")
+                line = f"{term}—{postings_json_no_spaces}\n"
+                f.write(line)
+                file_text += line
+
+        # Store a compressed version of the file
+        compressed = zlib.compress(str.encode(file_text))
+        with open(filename + '.zz', 'wb') as f:
+            f.write(compressed)
 
 if __name__ == '__main__':
     # Initialize and populate the inverted index (example)

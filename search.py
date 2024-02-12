@@ -1,17 +1,22 @@
 from collections import defaultdict
 import json
 import time
+import zlib
 
 class SearchEngine:
     def __init__(self):
         self.index = defaultdict(list)
 
-    def read_documents(self):
+    def read_documents(self, filename):
         documents = []
         # Pulls the documents from index.txt and stores them in a list. If index.txt does not exist, throws an error.
         try:
-            with open('index.txt', 'r') as f:
-                for line in f:
+            with open(filename + '.zz', 'rb') as f:
+                # Decompress the compressed index
+                lines = zlib.decompress(f.read()).decode().split('\n')[:-1]
+
+                # Iterate through lines
+                for line in lines:
                     term, postings = line.split('—')
                 
                     # Remove leading and trailing whitespace
@@ -46,7 +51,7 @@ class SearchEngine:
 if __name__ == '__main__':
     # Initialize and populate the search engine
     search_engine = SearchEngine()
-    search_engine.read_documents()
+    search_engine.read_documents('index.txt')
 
     # Perform a search using user input
     query = input('Enter a search query: ')
