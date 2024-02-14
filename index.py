@@ -57,7 +57,7 @@ class InvertedIndex:
 
             # Raw count of term in the document
             term_count = Counter(bigrams + tokens)
-            unique_words.update(tokens)
+            # unique_words.update(tokens)
 
             # ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
@@ -75,7 +75,7 @@ class InvertedIndex:
             for term, count in term_count.items():
                 tf = count / len(tokens)
                 # Weight the score with the tf and the importance of the word
-                score = tf + term_importance[token]
+                score = tf + term_importance.get(term, 0)
                 self.index[term].append((doc_id, score))
 
 
