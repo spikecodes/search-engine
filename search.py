@@ -63,3 +63,6 @@ def run(query):
     top_20_results = results[:20]
 
     return (time_taken, num_results, top_20_results)
+
+if __name__ == '__main__':
+    print(run(input("Enter a search query: ")))

@@ -5,7 +5,7 @@ from collections import defaultdict, Counter
 import math
 import json
 import zlib
-import sys
+import concurrent.futures
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -94,13 +94,15 @@ class InvertedIndex:
 
         # Save the index to a file for later use by search.py
         for term, postings in self.index.items():
-            postings_json_no_spaces = str(postings).replace(' ', '')
+            # Create postings_json which looks like {"doc_id": score, "doc_id": score, ...}
+            postings_json = {doc_id: score for doc_id, score in postings}
+            postings_json_no_spaces = str(postings_json).replace(' ', '')
             line = f"{term}—{postings_json_no_spaces}\n"
             file_lines.append(line)
 
         print("Cleaning up file...")
         # Remove the default dictionary extra memory from the file
-        file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace(')','')
+        file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace("'", '"')
 
         print("Storing index to file...")
         # Store the file
@@ -120,13 +122,21 @@ def generate():
     index = InvertedIndex()
 
     with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
-        counter = 0
         documents = json.load(f)
-        for doc_id in documents.keys():
-            # counter += 1
-            # if counter > 100:
-            #     break;
+        doc_ids = list(documents.keys())
+
+        counter = 0
+
+        def add_document(doc_id):
+            nonlocal counter
+            counter += 1
+            if counter > 100:
+                return
             index.add_document(doc_id)
+
+        # Use ThreadPoolExecutor to run add_document on multiple documents in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(add_document, doc_ids)
 
         # Calculate IDF values for the index
         total_docs = len(documents)
@@ -137,3 +147,6 @@ def generate():
 
     print("Unique words: " + str(len(unique_words)))
     print("Unique Doc IDs: " + str(len(unique_doc_ids)))
+
+if __name__ == "__main__":
+    generate()
