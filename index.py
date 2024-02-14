@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
-from collections import defaultdict
+from collections import defaultdict, Counter
 import math
 import json
 import zlib
@@ -43,7 +43,7 @@ class InvertedIndex:
 
             if len(tokens) == 0:
                 # If no tokens on page, exit
-                return;
+                return
             elif len(tokens) == 1:
                 # If only one token, use that
                 bigrams = [tokens[0]]
@@ -56,16 +56,12 @@ class InvertedIndex:
             unique_doc_ids.add(doc_id)
 
             # Raw count of term in the document
-            term_count = defaultdict(int)
-            for bigram in bigrams:
-                term_count[bigram] += 1
-            for token in tokens:
-                term_count[token] += 1
-                unique_words.add(token)
+            term_count = Counter(bigrams + tokens)
+            unique_words.update(tokens)
 
-            #ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
+            # ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
-            # Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
+            # Resource: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
             term_importance = defaultdict(int)
             for tag, weight in TAG_WEIGHTS.items():
                 elements = soup.find_all(tag)
@@ -73,10 +69,7 @@ class InvertedIndex:
                     tag_texts = element.get_text(" ", strip=True)
                     tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalnum() and word.lower() not in stop_words]
                     for token in tag_tokens:
-                        if token in term_importance:
-                            term_importance[token] += weight
-                        else:
-                            term_importance[token] = weight
+                        term_importance[token] += weight
 
             # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
@@ -85,12 +78,14 @@ class InvertedIndex:
                 score = tf + term_importance[token]
                 self.index[term].append((doc_id, score))
 
+
     def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values
         for term, postings in self.index.items():
             idf = math.log(total_docs / len(postings))
             for i, (doc_id, tf) in enumerate(postings):
-                self.index[term][i] = (doc_id, tf * idf)
+                score = tf * idf
+                self.index[term][i] = (doc_id, round(score, 3))
 
     def store_index(self, filename):
         file_lines = []
@@ -99,8 +94,7 @@ class InvertedIndex:
 
         # Save the index to a file for later use by search.py
         for term, postings in self.index.items():
-            postings_json = {doc_id: round(score, 3) for doc_id, score in postings}
-            postings_json_no_spaces = str(postings_json).replace(' ', '')
+            postings_json_no_spaces = str(postings).replace(' ', '')
             line = f"{term}—{postings_json_no_spaces}\n"
             file_lines.append(line)
 
@@ -129,9 +123,9 @@ def generate():
         counter = 0
         documents = json.load(f)
         for doc_id in documents.keys():
-            counter += 1
-            if counter > 100:
-                break;
+            # counter += 1
+            # if counter > 100:
+            #     break;
             index.add_document(doc_id)
 
         # Calculate IDF values for the index
