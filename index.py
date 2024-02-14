@@ -5,10 +5,11 @@ from collections import defaultdict
 import math
 import json
 import zlib
+import sys
 
 # Download necessary NLTK data
-# nltk.download('punkt')
-# nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('stopwords')
 
 stop_words = set(stopwords.words('english'))
 unique_words = set()
@@ -92,23 +93,33 @@ class InvertedIndex:
                 self.index[term][i] = (doc_id, tf * idf)
 
     def store_index(self, filename):
-        file_text = ""
+        file_lines = []
+
+        print("Creating storeable index object...")
 
         # Save the index to a file for later use by search.py
-        postings_json = defaultdict(int)
-        with open(filename, 'w') as f:
-            for term, postings in self.index.items():
-                for doc_id, score in postings:
-                    postings_json[doc_id] = float(f'{score:.3f}')
-                postings_json_no_spaces = str(json.dumps(postings_json)).replace(' ', '')
-                line = f"{term}—{postings_json_no_spaces}\n"
-                f.write(line)
-                file_text += line
+        for term, postings in self.index.items():
+            postings_json = {doc_id: round(score, 3) for doc_id, score in postings}
+            postings_json_no_spaces = str(postings_json).replace(' ', '')
+            line = f"{term}—{postings_json_no_spaces}\n"
+            file_lines.append(line)
 
+        print("Cleaning up file...")
+        # Remove the default dictionary extra memory from the file
+        file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace(')','')
+
+        print("Storing index to file...")
+        # Store the file
+        with open(filename, 'w', encoding='UTF-8') as f:
+            f.write(file_text)
+
+        print("Saving compressed version...")
         # Store a compressed version of the file
         compressed = zlib.compress(str.encode(file_text))
         with open(filename + '.zz', 'wb') as f:
             f.write(compressed)
+
+        print("Done!")
 
 def generate():
     # Initialize and populate the inverted index (example)
