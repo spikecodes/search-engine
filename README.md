@@ -9,3 +9,11 @@ For Project 3 of CS 121, we were tasked with creating a search engine. The assig
 ## How did we go above and beyond?
 
 We used zlib to compress and decompress the object, providing a near-100x difference in storage space.
+
+
+## To run the program
+Install Streamlit: pip install streamlit
+Run the program: streamlit run main.py
+On the browser: 
+- Click "Generate Index" for generating index
+- Enter query in the search bar and click "Search"
