@@ -55,7 +55,7 @@ def run(query):
     start_time=time.time()
 
     # Print the search results
-    results = search_engine.search(query)
+    results = search_engine.search(query.lower())
 
     time_taken=time.time()-start_time
 
