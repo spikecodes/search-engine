@@ -38,7 +38,7 @@ class InvertedIndex:
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
             texts = soup.get_text(" ", strip=True)
-            tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.lower() not in stop_words]
+            tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalnum() and word.lower() not in stop_words]
 
             if len(tokens) == 0:
                 # If no tokens on page, exit
@@ -70,7 +70,7 @@ class InvertedIndex:
                 elements = soup.find_all(tag)
                 for element in elements:
                     tag_texts = element.get_text(" ", strip=True)
-                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.lower() not in stop_words]
+                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalnum() and word.lower() not in stop_words]
                     for token in tag_tokens:
                         if token in term_importance:
                             term_importance[token] += weight
