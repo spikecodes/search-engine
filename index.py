@@ -7,25 +7,23 @@ import json
 import zlib
 
 # Download necessary NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
+# nltk.download('punkt')
+# nltk.download('stopwords')
 
 stop_words = set(stopwords.words('english'))
 unique_words = set()
 unique_doc_ids = set()
 
 TAG_WEIGHTS = {
-                'title': 10,
-                'h1': 6,
-                'h2': 5,
-                'h3': 4,
-                'h4': 3,
-                'h5': 3,
-                'h6': 3,
-                'b': 2,
-                'strong': 2,
-                'p': 1,
-                'span': 1,
+                'title': 0.5,
+                'h1': 0.35,
+                'h2': 0.30,
+                'h3': 0.25,
+                'h4': 0.20,
+                'h5': 0.15,
+                'h6': 0.10,
+                'b': 0.05,
+                'strong': 0.05,
               }
 
 class InvertedIndex:
