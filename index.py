@@ -15,17 +15,33 @@ stop_words = set(stopwords.words('english'))
 unique_words = set()
 unique_doc_ids = set()
 
+# TAG_WEIGHTS = {
+#                 'title': 0.5,
+#                 'h1': 0.35,
+#                 'h2': 0.30,
+#                 'h3': 0.25,
+#                 'h4': 0.20,
+#                 'h5': 0.15,
+#                 'h6': 0.10,
+#                 'b': 0.05,
+#                 'strong': 0.05,
+#               }
+
 TAG_WEIGHTS = {
-                'title': 0.5,
-                'h1': 0.35,
-                'h2': 0.30,
-                'h3': 0.25,
-                'h4': 0.20,
-                'h5': 0.15,
-                'h6': 0.10,
-                'b': 0.05,
-                'strong': 0.05,
+                'title': 10,
+                'h1': 6,
+                'h2': 5,
+                'h3': 4,
+                'h4': 3,
+                'h5': 3,
+                'h6': 3,
+                'b': 2,
+                'strong': 2
               }
+
+
+for tag, weight in TAG_WEIGHTS.items():
+    TAG_WEIGHTS[tag] = math.log(weight)
 
 class InvertedIndex:
     def __init__(self):
@@ -57,24 +73,36 @@ class InvertedIndex:
 
             # Raw count of term in the document
             term_count = Counter(bigrams + tokens)
-            # unique_words.update(tokens)
+            unique_words.update(tokens)
 
             # ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
             # Resource: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
             term_importance = defaultdict(int)
+
             for tag, weight in TAG_WEIGHTS.items():
                 elements = soup.find_all(tag)
                 for element in elements:
                     tag_texts = element.get_text(" ", strip=True)
                     tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalnum() and word.lower() not in stop_words]
                     for token in tag_tokens:
-                        term_importance[token] += weight
+                        #print("token: ", token)
+                        #print("weight: ", weight)
+                        #print("term_imp[token]: ", term_importance[token])
+                        if term_importance[token] < weight:
+                            term_importance[token] = weight
+
+            #print("term importance: ", term_importance)
+
+                        #{wordintile1: weight,
+                        # worldintiel2: weight,
+                        # }
 
             # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
                 tf = count / len(tokens)
                 # Weight the score with the tf and the importance of the word
+
                 score = tf + term_importance.get(term, 0)
                 self.index[term].append((doc_id, score))
 
@@ -130,7 +158,7 @@ def generate():
         def add_document(doc_id):
             nonlocal counter
             counter += 1
-            if counter > 100:
+            if counter > 50:
                 return
             index.add_document(doc_id)
 
