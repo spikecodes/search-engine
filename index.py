@@ -6,6 +6,8 @@ import math
 import json
 import zlib
 import concurrent.futures
+from search import SearchEngine
+import numpy as np
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -47,6 +49,7 @@ class InvertedIndex:
     def __init__(self):
         # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, tf) tuples
         self.index = defaultdict(list)
+        self.pagerank_scores = {}
 
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
@@ -107,13 +110,62 @@ class InvertedIndex:
                 self.index[term].append((doc_id, score))
 
 
-    def calculate_idf(self, total_docs):
+    # def calculate_idf(self, total_docs):
+    #     # Calculate IDF values for the index and update the index with TF-IDF values
+    #     for term, postings in self.index.items():
+    #         idf = math.log(total_docs / len(postings))
+    #         for i, (doc_id, tf) in enumerate(postings):
+    #             score = tf * idf
+    #             self.index[term][i] = (doc_id, round(score, 3))
+
+    def calculate_idf_and_pagerank(self, total_docs, documents):
         # Calculate IDF values for the index and update the index with TF-IDF values
+        # Compute adjacency matrix for PageRank
+        total_docs = len(documents)
+        adjacency_matrix = np.zeros((total_docs, total_docs))
+        doc_id_to_index = {doc_id: i for i, doc_id in enumerate(documents.keys())}
+
+        # Initialize IDF and PageRank scores
+        idf_scores = defaultdict(float)
+        pagerank_scores = {}
+
+        # Iterate through the index to compute IDF scores and build the adjacency matrix
         for term, postings in self.index.items():
             idf = math.log(total_docs / len(postings))
             for i, (doc_id, tf) in enumerate(postings):
-                score = tf * idf
-                self.index[term][i] = (doc_id, round(score, 3))
+                # Calculate IDF score
+                idf_scores[doc_id] += tf * idf
+
+                # Build adjacency matrix for PageRank
+                for related_doc_id, _ in postings:
+                    if doc_id != related_doc_id:
+                        adjacency_matrix[doc_id_to_index[doc_id]][doc_id_to_index[related_doc_id]] = 1
+
+        # Compute PageRank scores
+        damping_factor = 0.85
+        epsilon = 1.0e-8
+        max_iterations = 15
+        N = len(adjacency_matrix)
+        initial_scores = np.ones(N) / N
+        scores = initial_scores
+
+        for _ in range(max_iterations):
+            new_scores = (1 - damping_factor) / N + damping_factor * np.dot(adjacency_matrix.T, scores)
+            if np.linalg.norm(scores - new_scores) < epsilon:
+                break
+            scores = new_scores
+
+        # Store PageRank scores for each document
+        for doc_id, index_value in doc_id_to_index.items():
+            doc_url = documents[doc_id]
+            pagerank_scores[doc_id] = scores[index_value]
+
+        # Update the index with combined scores
+        for term, postings in self.index.items():
+            for i, (doc_id, _) in enumerate(postings):
+                combined_score = idf_scores[doc_id] + pagerank_scores[doc_id]
+                self.index[term][i] = (doc_id, round(combined_score, 3))
+
 
     def store_index(self, filename):
         file_lines = []
@@ -168,7 +220,9 @@ def generate():
 
         # Calculate IDF values for the index
         total_docs = len(documents)
-        index.calculate_idf(total_docs)
+        # index.calculate_idf(total_docs)
+        index.calculate_idf_and_pagerank(total_docs, documents)
+
 
         # Store the index to a file
         index.store_index('index.txt')

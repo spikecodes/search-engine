@@ -6,6 +6,7 @@ import zlib
 class SearchEngine:
     def __init__(self):
         self.index = defaultdict(list)
+        self.pagerank_scores = {}
 
     def read_documents(self, filename):
         # Pulls the documents from index.txt and stores them in a list. If index.txt does not exist, throws an error.
@@ -39,10 +40,10 @@ class SearchEngine:
             # Rank documents based on the query
             scores = defaultdict(float)
             if query in self.index:
-                for doc_id, tfidf in self.index[query].items():
+                for doc_id, tfidf_pageRank in self.index[query].items():
                     doc_url = documents[doc_id] # Resolve doc_id to the path
-                    scores[doc_url] += tfidf
-            
+                    scores[doc_url] += tfidf_pageRank
+
             # Sort the documents by score
             results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
             return results
