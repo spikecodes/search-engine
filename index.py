@@ -8,10 +8,12 @@ import zlib
 import concurrent.futures
 from search import SearchEngine
 import numpy as np
+import spacy
 
 # Download necessary NLTK data
 nltk.download('punkt')
 nltk.download('stopwords')
+
 
 stop_words = set(stopwords.words('english'))
 unique_words = set()
@@ -44,6 +46,19 @@ TAG_WEIGHTS = {
 
 for tag, weight in TAG_WEIGHTS.items():
     TAG_WEIGHTS[tag] = math.log(weight)
+def lemma(texts):
+    # Load the spaCy English model
+    nlp = spacy.load('en_core_web_sm')
+    # Lemma
+    doc = nlp(texts)
+
+    # Extract lemmatized tokens
+    lemmatized_tokens = [token.lemma_ for token in doc]
+
+    # Join the lemmatized tokens into a sentence
+    return(' '.join(lemmatized_tokens))
+
+
 
 class InvertedIndex:
     def __init__(self):
@@ -57,7 +72,9 @@ class InvertedIndex:
         with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
-            texts = soup.get_text(" ", strip=True)
+            pre_texts = soup.get_text(" ", strip=True)
+            texts = lemma(pre_texts)
+
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalnum() and word.lower() not in stop_words]
 
             if len(tokens) == 0:

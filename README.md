@@ -12,8 +12,15 @@ We used zlib to compress and decompress the object, providing a near-100x differ
 
 
 ## To run the program
-Install Streamlit: pip install streamlit
+Install Streamlit: pip install streamlit, pip install spacy,
+
 Run the program: streamlit run main.py
 On the browser: 
 - Click "Generate Index" for generating index
 - Enter query in the search bar and click "Search"
+
+
+Install spacy and download English language model:
+    pip install spacy
+    python -m spacy download en_core_web_sm
+

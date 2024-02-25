@@ -2,6 +2,10 @@ from collections import defaultdict
 import json
 import time
 import zlib
+import index
+
+
+
 
 class SearchEngine:
     def __init__(self):
@@ -56,6 +60,9 @@ def run(query):
     start_time=time.time()
     #normalized query
     query = ' '.join(word.lower() for word in query.split() if word.isalnum())
+    query = index.lemma(query)
+
+    #print("query: ", query)
 
     # Print the search results
     results = search_engine.search(query)
