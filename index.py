@@ -66,6 +66,15 @@ class InvertedIndex:
         self.index = defaultdict(list)
         self.pagerank_scores = {}
 
+    def extract_anchor_words(soup_content):
+        #soup_content = BeautifulSoup(html_content, 'html.parser')
+        anchor_words = []
+        for anchor_tag in soup_content.find_all('a'):
+            anchor_text = anchor_tag.get_text(strip=True)
+            if anchor_text:
+                anchor_words.extend(anchor_text.split())
+        return anchor_words
+
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
         # Read the document and tokenize the text
