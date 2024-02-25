@@ -54,9 +54,11 @@ def run(query):
     search_engine.read_documents('index.txt')
 
     start_time=time.time()
+    #normalized query
+    query = ' '.join(word.lower() for word in query.split() if word.isalnum())
 
     # Print the search results
-    results = search_engine.search(query.lower())
+    results = search_engine.search(query)
 
     time_taken=time.time()-start_time
 
