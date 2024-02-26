@@ -8,7 +8,7 @@ import zlib
 import concurrent.futures
 from search import SearchEngine
 import numpy as np
-import spacy
+from helper import lemma
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -46,24 +46,12 @@ TAG_WEIGHTS = {
 
 for tag, weight in TAG_WEIGHTS.items():
     TAG_WEIGHTS[tag] = math.log(weight)
-def lemma(texts):
-    # Load the spaCy English model
-    nlp = spacy.load('en_core_web_sm')
-    # Lemma
-    doc = nlp(texts)
-
-    # Extract lemmatized tokens
-    lemmatized_tokens = [token.lemma_ for token in doc]
-
-    # Join the lemmatized tokens into a sentence
-    return(' '.join(lemmatized_tokens))
-
-
 
 class InvertedIndex:
     def __init__(self):
         # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, tf) tuples
         self.index = defaultdict(list)
+        self.anchor_words = {}
         self.pagerank_scores = {}
 
     def extract_anchor_words(soup_content):
@@ -81,8 +69,19 @@ class InvertedIndex:
         with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
-            pre_texts = soup.get_text(" ", strip=True)
+            body = soup.find('body')
+
+            # Factor in the anchor words for this page (weight them as <b> tags)
+            if doc_id in self.anchor_words:
+                anchor_word_tag = soup.new_tag("b")
+                anchor_word_tag.string = " ".join(self.anchor_words[doc_id])
+                body.append(anchor_word_tag)
+
+            pre_texts = body.get_text(" ", strip=True)
             texts = lemma(pre_texts)
+
+            # Extract anchor words for any linked pages
+            self.anchor_words[doc_id] = self.extract_anchor_words(soup)
 
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalnum() and word.lower() not in stop_words]
 
@@ -110,7 +109,7 @@ class InvertedIndex:
             term_importance = defaultdict(int)
 
             for tag, weight in TAG_WEIGHTS.items():
-                elements = soup.find_all(tag)
+                elements = body.find_all(tag)
                 for element in elements:
                     tag_texts = element.get_text(" ", strip=True)
                     tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalnum() and word.lower() not in stop_words]
@@ -120,12 +119,6 @@ class InvertedIndex:
                         #print("term_imp[token]: ", term_importance[token])
                         if term_importance[token] < weight:
                             term_importance[token] = weight
-
-            #print("term importance: ", term_importance)
-
-                        #{wordintile1: weight,
-                        # worldintiel2: weight,
-                        # }
 
             # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
@@ -236,7 +229,7 @@ def generate():
         def add_document(doc_id):
             nonlocal counter
             counter += 1
-            if counter > 50:
+            if counter > 200:
                 return
             index.add_document(doc_id)
 

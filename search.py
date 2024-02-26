@@ -2,10 +2,7 @@ from collections import defaultdict
 import json
 import time
 import zlib
-import index
-
-
-
+from helper import lemma
 
 class SearchEngine:
     def __init__(self):
@@ -60,7 +57,7 @@ def run(query):
     start_time=time.time()
     #normalized query
     query = ' '.join(word.lower() for word in query.split() if word.isalnum())
-    query = index.lemma(query)
+    query = lemma(query)
 
     #print("query: ", query)
 
