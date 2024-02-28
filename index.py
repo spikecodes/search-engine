@@ -8,6 +8,7 @@ import zlib
 import concurrent.futures
 from search import SearchEngine
 import numpy as np
+from urllib.parse import urlparse
 from helper import lemma
 
 # Download necessary NLTK data
@@ -53,6 +54,8 @@ class InvertedIndex:
         self.index = defaultdict(list)
         self.anchor_words = {}
         self.pagerank_scores = {}
+        self.df = defaultdict(int)
+        self.document_outlinks = defaultdict(set)  # Store outlinks as a set to avoid duplicates
 
     def extract_anchor_words(soup_content):
         #soup_content = BeautifulSoup(html_content, 'html.parser')
@@ -62,6 +65,18 @@ class InvertedIndex:
             if anchor_text:
                 anchor_words.extend(anchor_text.split())
         return anchor_words
+
+    def extract_domain(self, url):
+        # Extracts the domain (netloc) from a given URL.
+        # - url (str): The URL from which to extract the domain.
+        # Returns:
+        # - str: The extracted domain if successful, None otherwise.
+        try:
+            parsed_url = urlparse(url)
+            return parsed_url.netloc
+        except Exception as e:
+            print(f"Error extracting domain from URL {url}: {e}")
+            return None
 
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
@@ -128,63 +143,73 @@ class InvertedIndex:
                 score = tf + term_importance.get(term, 0)
                 self.index[term].append((doc_id, score))
 
+            # Extract outlinks
+            outlinks = [link['href'] for link in soup.find_all('a', href=True)]
+            for outlink in outlinks:
+                domain = self.extract_domain(outlink)
+                if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
+                    self.document_outlinks[doc_id].add(outlink)
 
-    # def calculate_idf(self, total_docs):
-    #     # Calculate IDF values for the index and update the index with TF-IDF values
-    #     for term, postings in self.index.items():
-    #         idf = math.log(total_docs / len(postings))
-    #         for i, (doc_id, tf) in enumerate(postings):
-    #             score = tf * idf
-    #             self.index[term][i] = (doc_id, round(score, 3))
 
-    def calculate_idf_and_pagerank(self, total_docs, documents):
+    def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values
-        # Compute adjacency matrix for PageRank
-        total_docs = len(documents)
-        adjacency_matrix = np.zeros((total_docs, total_docs))
-        doc_id_to_index = {doc_id: i for i, doc_id in enumerate(documents.keys())}
-
-        # Initialize IDF and PageRank scores
-        idf_scores = defaultdict(float)
-        pagerank_scores = {}
-
-        # Iterate through the index to compute IDF scores and build the adjacency matrix
         for term, postings in self.index.items():
             idf = math.log(total_docs / len(postings))
             for i, (doc_id, tf) in enumerate(postings):
-                # Calculate IDF score
-                idf_scores[doc_id] += tf * idf
+                score = tf * idf
+                self.index[term][i] = (doc_id, round(score, 3))
 
-                # Build adjacency matrix for PageRank
-                for related_doc_id, _ in postings:
-                    if doc_id != related_doc_id:
-                        adjacency_matrix[doc_id_to_index[doc_id]][doc_id_to_index[related_doc_id]] = 1
+    def calculate_pagerank_scores(self, total_docs):
+        # Initialization for PageRank
+        doc_id_to_index = {doc_id: i for i, doc_id in enumerate(self.document_outlinks)}
+        adjacency_matrix = np.zeros((total_docs, total_docs))
 
-        # Compute PageRank scores
+        # Build the adjacency matrix based on outlinks
+        for doc_id, outlinks_set in self.document_outlinks.items():
+            doc_index = doc_id_to_index[doc_id]
+            for outlink in outlinks_set:
+                if outlink in doc_id_to_index:  # Check if outlink is within the indexed documents
+                    outlink_index = doc_id_to_index[outlink]
+                    adjacency_matrix[doc_index][outlink_index] = 1
+
+        # Calculate PageRank
         damping_factor = 0.85
+        initial_scores = np.ones(total_docs) / total_docs
+        scores = initial_scores
         epsilon = 1.0e-8
         max_iterations = 15
-        N = len(adjacency_matrix)
-        initial_scores = np.ones(N) / N
-        scores = initial_scores
 
-        for _ in range(max_iterations):
-            new_scores = (1 - damping_factor) / N + damping_factor * np.dot(adjacency_matrix.T, scores)
-            if np.linalg.norm(scores - new_scores) < epsilon:
+        for iteration in range(max_iterations):
+            new_scores = np.ones(total_docs) * (
+                    1 - damping_factor) / total_docs + damping_factor * adjacency_matrix.T.dot(scores)
+            if np.linalg.norm(new_scores - scores) < epsilon:
                 break
             scores = new_scores
+        # Update self.pagerank_scores with the calculated PageRank scores
 
-        # Store PageRank scores for each document
-        for doc_id, index_value in doc_id_to_index.items():
-            doc_url = documents[doc_id]
-            pagerank_scores[doc_id] = scores[index_value]
+        for doc_id, index in doc_id_to_index.items():
+            self.pagerank_scores[doc_id] = scores[index]
 
-        # Update the index with combined scores
+    def calculate_idf_and_pagerank(self, total_docs):
+        # First, call calculate_idf to update the index with TF-IDF values
+        self.calculate_idf(total_docs)
+
+        # Calculate PageRank scores
+        self.calculate_pagerank_scores(total_docs)
+
+        # Combine updated TF-IDF and PageRank scores
         for term, postings in self.index.items():
-            for i, (doc_id, _) in enumerate(postings):
-                combined_score = idf_scores[doc_id] + pagerank_scores[doc_id]
-                self.index[term][i] = (doc_id, round(combined_score, 3))
+            for i, posting in enumerate(postings):
+                doc_id, tf_idf_score = posting  # Unpack the posting to get the TF-IDF score
 
+                # Retrieve the PageRank score for the document
+                pagerank_score = self.pagerank_scores.get(doc_id, 0)
+
+                # Combine TF-IDF and PageRank scores
+                final_score = tf_idf_score + pagerank_score  # tf_idf_score is used here directly
+                # print(f"Doc ID: {doc_id}, TF_idf: {tf_idf_score}, Pagerank: {pagerank_score}")
+                # Update the posting with the combined score
+                self.index[term][i] = (doc_id, round(final_score, 3))
 
     def store_index(self, filename):
         file_lines = []
@@ -240,7 +265,7 @@ def generate():
         # Calculate IDF values for the index
         total_docs = len(documents)
         # index.calculate_idf(total_docs)
-        index.calculate_idf_and_pagerank(total_docs, documents)
+        index.calculate_idf_and_pagerank(total_docs)
 
 
         # Store the index to a file
