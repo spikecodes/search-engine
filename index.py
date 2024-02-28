@@ -6,15 +6,13 @@ import math
 import json
 import zlib
 import concurrent.futures
-from search import SearchEngine
 import numpy as np
 from urllib.parse import urlparse
-from helper import lemma
+import spacy
 
 # Download necessary NLTK data
 nltk.download('punkt')
 nltk.download('stopwords')
-
 
 stop_words = set(stopwords.words('english'))
 unique_words = set()
@@ -33,32 +31,44 @@ unique_doc_ids = set()
 #               }
 
 TAG_WEIGHTS = {
-                'title': 10,
-                'h1': 6,
-                'h2': 5,
-                'h3': 4,
-                'h4': 3,
-                'h5': 3,
-                'h6': 3,
-                'b': 2,
-                'strong': 2
-              }
-
+    'title': 10,
+    'h1': 6,
+    'h2': 5,
+    'h3': 4,
+    'h4': 3,
+    'h5': 3,
+    'h6': 3,
+    'b': 2,
+    'strong': 2
+}
 
 for tag, weight in TAG_WEIGHTS.items():
     TAG_WEIGHTS[tag] = math.log(weight)
+
+
+def lemma(texts):
+    # Load the spaCy English model
+    nlp = spacy.load('en_core_web_sm')
+    # Lemma
+    doc = nlp(texts)
+
+    # Extract lemmatized tokens
+    lemmatized_tokens = [token.lemma_ for token in doc]
+
+    # Join the lemmatized tokens into a sentence
+    return (' '.join(lemmatized_tokens))
+
 
 class InvertedIndex:
     def __init__(self):
         # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, tf) tuples
         self.index = defaultdict(list)
-        self.anchor_words = {}
         self.pagerank_scores = {}
         self.df = defaultdict(int)
         self.document_outlinks = defaultdict(set)  # Store outlinks as a set to avoid duplicates
 
     def extract_anchor_words(soup_content):
-        #soup_content = BeautifulSoup(html_content, 'html.parser')
+        # soup_content = BeautifulSoup(html_content, 'html.parser')
         anchor_words = []
         for anchor_tag in soup_content.find_all('a'):
             anchor_text = anchor_tag.get_text(strip=True)
@@ -84,21 +94,11 @@ class InvertedIndex:
         with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
-            body = soup.find('body')
-
-            # Factor in the anchor words for this page (weight them as <b> tags)
-            if doc_id in self.anchor_words:
-                anchor_word_tag = soup.new_tag("b")
-                anchor_word_tag.string = " ".join(self.anchor_words[doc_id])
-                body.append(anchor_word_tag)
-
-            pre_texts = body.get_text(" ", strip=True)
+            pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
 
-            # Extract anchor words for any linked pages
-            self.anchor_words[doc_id] = self.extract_anchor_words(soup)
-
-            tokens = [word.lower() for word in nltk.word_tokenize(texts) if word.isalnum() and word.lower() not in stop_words]
+            tokens = [word.lower() for word in nltk.word_tokenize(texts) if
+                      word.isalnum() and word.lower() not in stop_words]
 
             if len(tokens) == 0:
                 # If no tokens on page, exit
@@ -124,16 +124,23 @@ class InvertedIndex:
             term_importance = defaultdict(int)
 
             for tag, weight in TAG_WEIGHTS.items():
-                elements = body.find_all(tag)
+                elements = soup.find_all(tag)
                 for element in elements:
                     tag_texts = element.get_text(" ", strip=True)
-                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if word.isalnum() and word.lower() not in stop_words]
+                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if
+                                  word.isalnum() and word.lower() not in stop_words]
                     for token in tag_tokens:
-                        #print("token: ", token)
-                        #print("weight: ", weight)
-                        #print("term_imp[token]: ", term_importance[token])
+                        # print("token: ", token)
+                        # print("weight: ", weight)
+                        # print("term_imp[token]: ", term_importance[token])
                         if term_importance[token] < weight:
                             term_importance[token] = weight
+
+            # print("term importance: ", term_importance)
+
+            # {wordintile1: weight,
+            # worldintiel2: weight,
+            # }
 
             # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
@@ -149,7 +156,6 @@ class InvertedIndex:
                 domain = self.extract_domain(outlink)
                 if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
                     self.document_outlinks[doc_id].add(outlink)
-
 
     def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values
@@ -241,6 +247,7 @@ class InvertedIndex:
 
         print("Done!")
 
+
 def generate():
     # Initialize and populate the inverted index (example)
     index = InvertedIndex()
@@ -254,7 +261,7 @@ def generate():
         def add_document(doc_id):
             nonlocal counter
             counter += 1
-            if counter > 200:
+            if counter > 50:
                 return
             index.add_document(doc_id)
 
@@ -267,12 +274,12 @@ def generate():
         # index.calculate_idf(total_docs)
         index.calculate_idf_and_pagerank(total_docs)
 
-
         # Store the index to a file
         index.store_index('index.txt')
 
     print("Unique words: " + str(len(unique_words)))
     print("Unique Doc IDs: " + str(len(unique_doc_ids)))
+
 
 if __name__ == "__main__":
     generate()
