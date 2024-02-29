@@ -3,6 +3,9 @@ import json
 import time
 import zlib
 from helper import lemma
+import index
+from urllib.parse import urljoin, urlparse
+
 
 class SearchEngine:
     def __init__(self):
@@ -19,7 +22,7 @@ class SearchEngine:
                 # Iterate through lines
                 for line in lines:
                     term, postings = line.split('—')
-                
+
                     # Remove leading and trailing whitespace
                     term = term.strip()
                     postings = postings.strip()
@@ -39,37 +42,43 @@ class SearchEngine:
             documents = json.load(f)
 
             # Rank documents based on the query
-            scores = defaultdict(float)
+            scores = defaultdict(list)
             if query in self.index:
                 for doc_id, tfidf_pageRank in self.index[query].items():
-                    doc_url = documents[doc_id] # Resolve doc_id to the path
-                    scores[doc_url] += tfidf_pageRank
+                    doc_url = documents[doc_id]  # Resolve doc_id to the path
+                    # scores[doc_url] += tfidf_pageRank
+
+                    # add title to scores dictionary
+                    scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
 
             # Sort the documents by score
-            results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            results = sorted(scores.items(), key=lambda x: x[1][0], reverse=True)
             return results
+
 
 def run(query):
     # Initialize and populate the search engine
     search_engine = SearchEngine()
     search_engine.read_documents('index.txt')
 
-    start_time=time.time()
-    #normalized query
+    start_time = time.time()
+    # normalized query
     query = ' '.join(word.lower() for word in query.split() if word.isalnum())
     query = lemma(query)
 
-    #print("query: ", query)
+    # print("query: ", query)
 
     # Print the search results
     results = search_engine.search(query)
 
-    time_taken=time.time()-start_time
+    time_taken = time.time() - start_time
 
     num_results = len(results)
     top_20_results = results[:20]
+    print(top_20_results)
 
     return (time_taken, num_results, top_20_results)
+
 
 if __name__ == '__main__':
     print(run(input("Enter a search query: ")))

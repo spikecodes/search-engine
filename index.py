@@ -17,6 +17,8 @@ nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 unique_words = set()
 unique_doc_ids = set()
+titles = defaultdict(str)
+
 
 # TAG_WEIGHTS = {
 #                 'title': 0.5,
@@ -46,6 +48,9 @@ for tag, weight in TAG_WEIGHTS.items():
     TAG_WEIGHTS[tag] = math.log(weight)
 
 
+
+
+
 def lemma(texts):
     # Load the spaCy English model
     nlp = spacy.load('en_core_web_sm')
@@ -66,6 +71,13 @@ class InvertedIndex:
         self.pagerank_scores = {}
         self.df = defaultdict(int)
         self.document_outlinks = defaultdict(set)  # Store outlinks as a set to avoid duplicates
+
+    def get_title(soup_content):
+        title_element = soup_content.find('title')
+        if title_element:
+            return title_element.get_text(strip=True)
+        else:
+            return "No Title"
 
     def extract_anchor_words(soup_content):
         # soup_content = BeautifulSoup(html_content, 'html.parser')
@@ -96,6 +108,9 @@ class InvertedIndex:
             soup = BeautifulSoup(html_content, 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
+            #extract title
+            title_element = soup.find('title')
+            titles[doc_id] = title_element.get_text()
 
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]

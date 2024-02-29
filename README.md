@@ -24,3 +24,9 @@ Install spacy and download English language model:
     pip install spacy
     python -m spacy download en_core_web_sm
 
+# Pending Tasks:
+- UI - make the URLs clickable
+- EC - +2 UI: display the title and a brief description of each page in the results.
+- EC - +2 Word position
+- EC - +1 Anchor word
+- Need to check: search more than 2 words?, should save 2-gram in different variable?, weight of the important words?
