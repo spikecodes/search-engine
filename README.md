@@ -11,21 +11,28 @@ For Project 3 of CS 121, we were tasked with creating a search engine. The assig
 
 We used zlib to compress and decompress the object, providing a near-100x difference in storage space.
 
-
 ## To run the program
+
 Install Streamlit: pip install streamlit, pip install spacy,
 
 Run the program: streamlit run main.py
-On the browser: 
+On the browser:
+
 - Click "Generate Index" for generating index
 - Enter query in the search bar and click "Search"
 
-
 Install spacy and download English language model:
-    pip install spacy
-    python -m spacy download en_core_web_sm
+pip install spacy
+python -m spacy download en_core_web_sm
+
+## Outputted Files
+
+1. `index.txt` — This is the uncompressed index of terms.
+2. `index.txt.zz` — This is the zlib-compressed index of terms.
+3. `docs_metadata.txt` — This stores the title and description of each document, extracted during the indexing stage.
 
 # Pending Tasks:
+
 - EC - +2 Word position
 - search more than 2 words???
 - should save 2-gram in different variable???

@@ -20,9 +20,6 @@ unique_doc_ids = set()
 titles_description = defaultdict(list)
 anchor_words = defaultdict(str)
 
-
-
-
 # TAG_WEIGHTS = {
 #                 'title': 0.5,
 #                 'h1': 0.35,
@@ -49,10 +46,6 @@ TAG_WEIGHTS = {
 
 for tag, weight in TAG_WEIGHTS.items():
     TAG_WEIGHTS[tag] = math.log(weight)
-
-
-
-
 
 def lemma(texts):
     # Load the spaCy English model
@@ -110,7 +103,7 @@ class InvertedIndex:
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
         # Read the document and tokenize the text
-        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
+        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:            
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
@@ -120,9 +113,9 @@ class InvertedIndex:
             title_element = soup.find('title')
             #extract description
             description = self.get_description(soup)
-            print("description: ", description)
+            # print("description: ", description)
             titles_description[doc_id].append((title_element.get_text(), description))
-            print(" titles_description[doc_id] : ", titles_description[doc_id])
+            # print(" titles_description[doc_id] : ", titles_description[doc_id])
 
 
             #get anchor text from this doc_id
@@ -140,7 +133,6 @@ class InvertedIndex:
 
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]
-
 
             if len(tokens) == 0:
                 # If no tokens on page, exit
@@ -198,8 +190,8 @@ class InvertedIndex:
                 domain = self.extract_domain(outlink)
                 if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
                     self.document_outlinks[doc_id].add(outlink)
-            print("docid ", doc_id)
-            print("doc outlinks: ", self.document_outlinks[doc_id])
+            # print("docid ", doc_id)
+            # print("doc outlinks: ", self.document_outlinks[doc_id])
 
 
     def calculate_idf(self, total_docs):
@@ -278,6 +270,11 @@ class InvertedIndex:
         print("Cleaning up file...")
         # Remove the default dictionary extra memory from the file
         file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace("'", '"')
+
+        print("Storing docs_metadata.txt")
+        docs_metadata = json.dumps(titles_description)
+        with open("docs_metadata.txt", 'w', encoding='UTF-8') as f:
+            f.write(docs_metadata)
 
         print("Storing index to file...")
         # Store the file

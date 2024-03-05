@@ -1,7 +1,9 @@
 import index
 import search
 import streamlit as st
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
+import requests
+from os.path import exists
 
 def run_search():
   time_taken, num_results, top_20_results = search.run(query)
@@ -19,7 +21,9 @@ def run_search():
             # st.markdown(link_text, unsafe_allow_html=True)
             # st.write(description)
 
-            link_text = f"[{title}]({abs_url})"
+            encoded_url = requests.utils.requote_uri(abs_url)
+
+            link_text = f"[{title}]({encoded_url})"
             st.subheader(link_text)
             st.write(description)
 
@@ -31,10 +35,12 @@ st.title("CS 121 — Project 3")
 
 st.header('Index')
 st.button("Generate Index", on_click=index.generate)
-if len(index.unique_words) > 0:
+
+if exists("index.txt.zz") and exists("docs_metadata.txt"):
     st.header('Search')
     query = st.text_input("Query", placeholder="computer science")
-    if st.button("Search"):
+    search_button = st.button("Search")
+    if query or search_button:
         run_search()
 
 

@@ -3,9 +3,7 @@ import json
 import time
 import zlib
 from helper import lemma
-import index
 from urllib.parse import urljoin, urlparse
-
 
 class SearchEngine:
     def __init__(self):
@@ -33,7 +31,7 @@ class SearchEngine:
                     # Add the term and postings to the index
                     self.index[term] = parsed
         except FileNotFoundError:
-            print('Error: index.txt not found')
+            print('Error: index.txt.zz not found')
             exit(1)
 
     def search(self, query):
@@ -48,9 +46,13 @@ class SearchEngine:
                     doc_url = documents[doc_id]  # Resolve doc_id to the path
                     # scores[doc_url] += tfidf_pageRank
 
+                    with open("docs_metadata.txt", 'r') as docs_metadata:
+                        titles_description = json.load(docs_metadata)
+
                     # add title and , description to scores dictionary
-                    title = index.titles_description[doc_id][-1][0]
-                    description = index.titles_description[doc_id][-1][1]
+                    title = titles_description[doc_id][-1][0]
+                    description = titles_description[doc_id][-1][1]
+
                     #scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
                     scores[doc_url].append((tfidf_pageRank, title, description))
 
