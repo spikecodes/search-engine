@@ -17,7 +17,10 @@ nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 unique_words = set()
 unique_doc_ids = set()
-titles = defaultdict(str)
+titles_description = defaultdict(list)
+anchor_words = defaultdict(str)
+
+
 
 
 # TAG_WEIGHTS = {
@@ -60,7 +63,7 @@ def lemma(texts):
     # Extract lemmatized tokens
     lemmatized_tokens = [token.lemma_ for token in doc]
 
-    # Join the lemmatized tokens into a sentence
+    # Join the lemmatized tokens into a string
     return (' '.join(lemmatized_tokens))
 
 
@@ -79,14 +82,18 @@ class InvertedIndex:
         else:
             return "No Title"
 
-    def extract_anchor_words(soup_content):
+    def get_anchor_text(self, soup_content):
         # soup_content = BeautifulSoup(html_content, 'html.parser')
-        anchor_words = []
         for anchor_tag in soup_content.find_all('a'):
             anchor_text = anchor_tag.get_text(strip=True)
-            if anchor_text:
-                anchor_words.extend(anchor_text.split())
-        return anchor_words
+        return anchor_text
+
+    def get_description(self, soup_content):
+        metas = soup_content.find_all('meta')  # Get Meta Description
+        for m in metas:
+            if m.get('name') == 'description':
+                return m.get('content')
+        return "No Description"
 
     def extract_domain(self, url):
         # Extracts the domain (netloc) from a given URL.
@@ -108,12 +115,32 @@ class InvertedIndex:
             soup = BeautifulSoup(html_content, 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
+
             #extract title
             title_element = soup.find('title')
-            titles[doc_id] = title_element.get_text()
+            #extract description
+            description = self.get_description(soup)
+            print("description: ", description)
+            titles_description[doc_id].append((title_element.get_text(), description))
+            print(" titles_description[doc_id] : ", titles_description[doc_id])
+
+
+            #get anchor text from this doc_id
+            anchor_text = ""
+            for anchor_tag in soup.find_all('a'):
+                #link = anchor_tag.get('href')
+                anchor_text = anchor_text + " " + anchor_tag.get_text(strip=True)
+            anchor_words[doc_id] = anchor_text
+
+            # add anchor text of this doc id before tokenizing
+            #anchor_text = self.get_anchor_text(soup)
+            if doc_id in anchor_words:
+                anchor = lemma(anchor_words[doc_id])
+            texts += anchor
 
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]
+
 
             if len(tokens) == 0:
                 # If no tokens on page, exit
@@ -171,6 +198,9 @@ class InvertedIndex:
                 domain = self.extract_domain(outlink)
                 if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
                     self.document_outlinks[doc_id].add(outlink)
+            print("docid ", doc_id)
+            print("doc outlinks: ", self.document_outlinks[doc_id])
+
 
     def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values

@@ -48,11 +48,15 @@ class SearchEngine:
                     doc_url = documents[doc_id]  # Resolve doc_id to the path
                     # scores[doc_url] += tfidf_pageRank
 
-                    # add title to scores dictionary
-                    scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
+                    # add title and , description to scores dictionary
+                    title = index.titles_description[doc_id][-1][0]
+                    description = index.titles_description[doc_id][-1][1]
+                    #scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
+                    scores[doc_url].append((tfidf_pageRank, title, description))
+
 
             # Sort the documents by score
-            results = sorted(scores.items(), key=lambda x: x[1][0], reverse=True)
+            results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
             return results
 
 
