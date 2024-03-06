@@ -10,6 +10,10 @@ import numpy as np
 from urllib.parse import urlparse
 import spacy
 
+# The number of documents to generate indexes for
+# Set this to -1 to index every document
+NUM_DOCS_TO_INDEX = 50
+
 # Download necessary NLTK data
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -85,7 +89,8 @@ class InvertedIndex:
         metas = soup_content.find_all('meta')  # Get Meta Description
         for m in metas:
             if m.get('name') == 'description':
-                return m.get('content')
+                description = m.get('content').replace("\n", " ")
+                return (description[:160] + '...') if len(description) > 160 else description
         return "No Description"
 
     def extract_domain(self, url):
@@ -111,10 +116,12 @@ class InvertedIndex:
 
             #extract title
             title_element = soup.find('title')
+            title = title_element.get_text()
+            title = (title[:65] + '...') if len(title) > 65 else title
             #extract description
             description = self.get_description(soup)
             # print("description: ", description)
-            titles_description[doc_id].append((title_element.get_text(), description))
+            titles_description[doc_id].append((title, description))
             # print(" titles_description[doc_id] : ", titles_description[doc_id])
 
 
@@ -303,8 +310,9 @@ def generate():
         def add_document(doc_id):
             nonlocal counter
             counter += 1
-            if counter > 50:
-                return
+            if NUM_DOCS_TO_INDEX != -1:
+                if counter > NUM_DOCS_TO_INDEX:
+                    return
             index.add_document(doc_id)
 
         # Use ThreadPoolExecutor to run add_document on multiple documents in parallel

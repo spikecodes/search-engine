@@ -4,6 +4,8 @@ import streamlit as st
 from urllib.parse import urljoin
 import requests
 from os.path import exists
+from threading import Thread
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 def run_search():
   time_taken, num_results, top_20_results = search.run(query)
@@ -27,14 +29,18 @@ def run_search():
             st.subheader(link_text)
             st.write(description)
 
-
 # for doc_url, doc_scores in top_20_results:
   #     st.write(f'title: {doc_scores[-1]}. url: {doc_url}')
 
 st.title("CS 121 — Project 3")
 
 st.header('Index')
-st.button("Generate Index", on_click=index.generate)
+
+gen_index_btn = st.button("Generate Index")
+
+if gen_index_btn:
+  with st.spinner(text="Generating index..."):
+    index.generate()
 
 if exists("index.txt.zz") and exists("docs_metadata.txt"):
     st.header('Search')
