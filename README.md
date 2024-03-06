@@ -7,9 +7,32 @@ For Project 3 of CS 121, we were tasked with creating a search engine. The assig
 #Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
 #Get Desciption resource: https://stackoverflow.com/questions/38009787/how-to-extract-meta-description-from-urls-using-python
 
+## How do we compile results for queries?
+
+We use the index to find the documents that contain the search terms. We then rank the documents based on the number of times the search terms appear in the document. We also use the PageRank algorithm to rank the search results.
+
+## How do we handle multi-word (>2) queries?
+
+We handle multi-word queries by breaking them down into individual words and then searching for each word in the index. We then rank the documents based on the number of "matches" for each word.
+
+For example, if a user searches "Irvine Computer Science":
+
+1. We break the query into individual words: ["Irvine", "Computer", "Science"]
+
+2. We search for each word in the index and rank the documents based on the number of "matches" for each word.
+   a. Pages with Irvine, Computer, and Science will be ranked highest.
+   b. Then, pages with Irvine and Computer (or any other combination of two words) will be ranked next.
+   c. Finally, pages with only one of the words will be ranked last.
+
+3. We also factor in the PageRank algorithm to rank the search results.
+
 ## How did we go above and beyond?
 
 We used zlib to compress and decompress the object, providing a near-100x difference in storage space.
+
+We also used the Streamlit library to create a simple web interface for the search engine.
+
+We further implemneted the PageRank algorithm to rank the search results.
 
 ## To run the program
 

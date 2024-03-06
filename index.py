@@ -177,12 +177,6 @@ class InvertedIndex:
                         if term_importance[token] < weight:
                             term_importance[token] = weight
 
-            # print("term importance: ", term_importance)
-
-            # {wordintile1: weight,
-            # worldintiel2: weight,
-            # }
-
             # Calculate score for each term and update index and doc lengths
             for term, count in term_count.items():
                 tf = count / len(tokens)

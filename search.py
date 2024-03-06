@@ -4,6 +4,7 @@ import time
 import zlib
 from helper import lemma
 from urllib.parse import urljoin, urlparse
+from itertools import combinations
 
 class SearchEngine:
     def __init__(self):
@@ -33,6 +34,33 @@ class SearchEngine:
         except FileNotFoundError:
             print('Error: index.txt.zz not found')
             exit(1)
+
+    # Function to search and return results with count of matched words
+    def search_and_count(self, query_words):
+        results_dict = {}
+        # Search for individual words
+        for word in query_words:
+            for url, data_list in self.search(word):
+                if url in results_dict:
+                    results_dict[url]['count'] += 1
+                    results_dict[url]['data'].update(data_list)
+                else:
+                    results_dict[url] = {'count': 1, 'data': set(data_list)}
+
+        # Search for pairs if more than 2 words
+        if len(query_words) > 2:
+            for word1, word2 in combinations(query_words, 2):
+                query_pair = f"{word1} {word2}"
+                for url, data_list in self.search(query_pair):
+                    if url in results_dict:
+                        results_dict[url]['count'] += 2  # Increment by 2 as it matches 2 words
+                        results_dict[url]['data'].update(data_list)
+                    else:
+                        results_dict[url] = {'count': 2, 'data': set(data_list)}
+
+        print(results_dict)
+        return results_dict
+
 
     def search(self, query):
         with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
@@ -74,14 +102,21 @@ def run(query):
 
     # print("query: ", query)
 
-    # Print the search results
-    results = search_engine.search(query)
+    # Search the query
+    query_words = query.split()
+    results_dict = search_engine.search_and_count(query_words)
+
+    # Sort results based on count (descending) to prioritize URLs with more query words
+    sorted_results = sorted(results_dict.items(), key=lambda x: x[1]['count'], reverse=True)
+
+    # Format sorted results
+    results = [(url, list(data['data'])) for url, data in sorted_results]
 
     time_taken = time.time() - start_time
 
     num_results = len(results)
     top_20_results = results[:20]
-    print(top_20_results)
+    # print(top_20_results)
 
     return (time_taken, num_results, top_20_results)
 
