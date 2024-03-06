@@ -38,7 +38,7 @@ class SearchEngine:
     # Function to search and return results with count of matched words
     def search_and_count(self, query_words):
         results_dict = {}
-        # Search for individual words
+        # Search for individual words or pairs
         for word in query_words:
             for url, data_list in self.search(word):
                 if url in results_dict:
@@ -47,7 +47,7 @@ class SearchEngine:
                 else:
                     results_dict[url] = {'count': 1, 'data': set(data_list)}
 
-        # Search for pairs if more than 2 words
+        # Break longer queries into pairs if more than 2 words
         if len(query_words) > 2:
             for word1, word2 in combinations(query_words, 2):
                 query_pair = f"{word1} {word2}"
@@ -58,7 +58,14 @@ class SearchEngine:
                     else:
                         results_dict[url] = {'count': 2, 'data': set(data_list)}
 
-        print(results_dict)
+        # Deduplicate results by URL, preserve one with highest score
+        for url in results_dict:
+            unique_data = {}
+            for score, title, description in results_dict[url]['data']:
+                if title not in unique_data or unique_data[title][0] < score:
+                    unique_data[title] = (score, description)
+            results_dict[url]['data'] = set((score, title, desc) for title, (score, desc) in unique_data.items())
+
         return results_dict
 
 
@@ -106,12 +113,13 @@ def run(query):
     query_words = query.split()
     results_dict = search_engine.search_and_count(query_words)
 
-    # Sort results based on count (descending) to prioritize URLs with more query words
+    # Sort results based on count (descending) to prioritize URLs with more query word matches
     sorted_results = sorted(results_dict.items(), key=lambda x: x[1]['count'], reverse=True)
 
-    # Format sorted results
-    results = [(url, list(data['data'])) for url, data in sorted_results]
+    # Format sorted results to be [(url, [(score, title, description)]), ...]
+    results = [(url, list(data['data'])) for url, data in sorted_results]    
 
+    # Store the time taken to search
     time_taken = time.time() - start_time
 
     num_results = len(results)
