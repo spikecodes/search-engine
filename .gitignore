@@ -4,6 +4,7 @@ webpages/
 # Index
 index.txt
 index.txt.zz
+docs_metadata.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

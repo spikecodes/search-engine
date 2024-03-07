@@ -343,7 +343,6 @@ class InvertedIndex:
 
         print("Done!")
 
-
 def generate():
     # Initialize and populate the inverted index (example)
     index = InvertedIndex()

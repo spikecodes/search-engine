@@ -27,6 +27,7 @@ def run_search():
 
             link_text = f"[{title}]({encoded_url})"
             st.subheader(link_text)
+            st.caption(encoded_url)
             st.write(description)
 
 # for doc_url, doc_scores in top_20_results:
@@ -43,6 +44,8 @@ if gen_index_btn:
     index.generate()
 
 if exists("index.txt.zz") and exists("docs_metadata.txt"):
+    search.load_index()
+
     st.header('Search')
     query = st.text_input("Query", placeholder="computer science")
     search_button = st.button("Search")

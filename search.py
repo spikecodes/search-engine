@@ -104,10 +104,20 @@ class SearchEngine:
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
             return results
 
-def run(query):
+search_engine = SearchEngine()
+
+def load_index():
+    global search_engine
     # Initialize and populate the search engine
-    search_engine = SearchEngine()
-    search_engine.read_documents('index.txt')
+    if not search_engine:
+        search_engine = SearchEngine()
+    if len(search_engine.index) == 0:    
+        search_engine.read_documents('index.txt')
+        print("Index loaded")
+
+def run(query):
+    if not search_engine:
+        load_index()
 
     start_time = time.time()
     # normalized query
