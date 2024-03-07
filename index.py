@@ -69,7 +69,6 @@ class InvertedIndex:
             return "No Title"
 
     def get_anchor_text(self, soup_content):
-        # soup_content = BeautifulSoup(html_content, 'html.parser')
         for anchor_tag in soup_content.find_all('a'):
             anchor_text = anchor_tag.get_text(strip=True)
         return anchor_text
@@ -97,32 +96,25 @@ class InvertedIndex:
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
         # Read the document and tokenize the text
-        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:            
-            html_content = f.read()
-            soup = BeautifulSoup(html_content, 'html.parser')
+        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:    
+            # Parse page as HTML, get text (non-code) and lemmatize it
+            soup = BeautifulSoup(f.read(), 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
 
-            #extract title
+            # Extract title (truncate if too long) and description from page
             title_element = soup.find('title')
             title = title_element.get_text()
             title = (title[:65] + '...') if len(title) > 65 else title
-            #extract description
             description = self.get_description(soup)
-            # print("description: ", description)
             titles_description[doc_id].append((title, description))
-            # print(" titles_description[doc_id] : ", titles_description[doc_id])
 
-
-            #get anchor text from this doc_id
+            # Store anchor words for this doc_id
             anchor_text = ""
             for anchor_tag in soup.find_all('a'):
-                #link = anchor_tag.get('href')
-                anchor_text = anchor_text + " " + anchor_tag.get_text(strip=True)
+                anchor_text += " " + anchor_tag.get_text(strip=True)
             anchor_words[doc_id] = anchor_text
-
-            # add anchor text of this doc id before tokenizing
-            #anchor_text = self.get_anchor_text(soup)
+            # Lemmatize anchor words
             if doc_id in anchor_words:
                 anchor = lemma(anchor_words[doc_id])
             texts += anchor
@@ -277,7 +269,7 @@ class InvertedIndex:
             return 0
         return 1 / (min_distance + 1)  # Add 1 to avoid division by zero
 
-    def calculate_idf_and_pagerank(self, total_docs, query_terms=None):
+    def calculate_idf_and_pagerank_and_proximity(self, total_docs, query_terms=None):
         # First, call calculate_idf to update the index with TF-IDF values
         self.calculate_idf(total_docs)
 
@@ -363,7 +355,7 @@ def generate():
         # Calculate IDF values for the index
         total_docs = len(documents)
         # index.calculate_idf(total_docs)
-        index.calculate_idf_and_pagerank(total_docs)
+        index.calculate_idf_and_pagerank_and_proximity(total_docs)
 
         # Store the index to a file
         index.store_index('index.txt')
