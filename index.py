@@ -163,6 +163,13 @@ class InvertedIndex:
             term_count = Counter(bigrams + tokens)
             unique_words.update(tokens)
 
+            #Track position for word position
+            tokens_with_positions = [(word, pos) for pos, word in enumerate(tokens)]
+            monogram_count_with_positions = defaultdict(lambda: {"count": 0, "positions": []})
+            for term, position in tokens_with_positions:
+                monogram_count_with_positions[term]["count"] += 1
+                monogram_count_with_positions[term]["positions"].append(position)
+
             # ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
             # Resource: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
@@ -358,6 +365,7 @@ def generate():
         global documents
         documents = json.load(f)
         doc_ids = list(documents.keys())
+
         counter = 0
 
         def add_document(doc_id):
