@@ -52,9 +52,6 @@ python -m spacy download en_core_web_sm
 2. `index.txt.zz` — This is the zlib-compressed index of terms.
 3. `docs_metadata.txt` — This stores the title and description of each document, extracted during the indexing stage.
 
-# Pending Tasks:
-
-- EC - +2 Word position √
-- search more than 2 words √
-- should save 2-gram in different variable √
-- Testing √
+# Testing cases:
+- For lemmatization: run vs ran :  give same result
+- Case sensitive: IrviNe vs irvine
