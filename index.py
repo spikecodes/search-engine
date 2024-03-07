@@ -18,6 +18,8 @@ NUM_DOCS_TO_INDEX = 50
 nltk.download('punkt')
 nltk.download('stopwords')
 
+documents = defaultdict(str)
+
 stop_words = set(stopwords.words('english'))
 unique_words = set()
 unique_doc_ids = set()
@@ -123,18 +125,22 @@ class InvertedIndex:
             # print(" titles_description[doc_id] : ", titles_description[doc_id])
 
 
-            #get anchor text from this doc_id
+            #get anchor text from this doc_id, A
             anchor_text = ""
             for anchor_tag in soup.find_all('a'):
-                #link = anchor_tag.get('href')
+                url = anchor_tag.get('href')
+                parsed_url = urlparse(url)
+                url = parsed_url.netloc + parsed_url.path
                 anchor_text = anchor_text + " " + anchor_tag.get_text(strip=True)
-            anchor_words[doc_id] = anchor_text
+                anchor_words[url] = anchor_text
 
             # add anchor text of this doc id before tokenizing
             #anchor_text = self.get_anchor_text(soup)
-            if doc_id in anchor_words:
-                anchor = lemma(anchor_words[doc_id])
-            texts += anchor
+            current_url = urlparse(documents[doc_id])
+            current_url = current_url.netloc + current_url.path
+            if current_url in anchor_words:
+                texts += lemma(anchor_words[current_url])
+
 
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]
@@ -349,9 +355,9 @@ def generate():
     index = InvertedIndex()
 
     with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
+        global documents
         documents = json.load(f)
         doc_ids = list(documents.keys())
-
         counter = 0
 
         def add_document(doc_id):

@@ -6,6 +6,7 @@ from helper import lemma
 from urllib.parse import urljoin, urlparse
 from itertools import combinations
 
+
 class SearchEngine:
     def __init__(self):
         self.index = defaultdict(list)
@@ -46,7 +47,7 @@ class SearchEngine:
                     results_dict[url]['data'].update(data_list)
                 else:
                     results_dict[url] = {'count': 1, 'data': set(data_list)}
-        
+
         # Search for pairs of words
         if len(query_words) == 2:
             query_pair = f"{query_words[0]} {query_words[1]}"
@@ -87,7 +88,7 @@ class SearchEngine:
             scores = defaultdict(list)
             if query in self.index:
                 with open("docs_metadata.txt", 'r') as docs_metadata:
-                   titles_description = json.load(docs_metadata)
+                    titles_description = json.load(docs_metadata)
 
                 for doc_id, tfidf_pageRank in self.index[query].items():
                     doc_url = documents[doc_id]  # Resolve doc_id to the path
@@ -97,12 +98,13 @@ class SearchEngine:
                     title = titles_description[doc_id][-1][0]
                     description = titles_description[doc_id][-1][1]
 
-                    #scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
+                    # scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
                     scores[doc_url].append((tfidf_pageRank, title, description))
 
             # Sort the documents by score
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
             return results
+
 
 def run(query):
     # Initialize and populate the search engine
@@ -124,7 +126,7 @@ def run(query):
     sorted_results = sorted(results_dict.items(), key=lambda x: x[1]['count'], reverse=True)
 
     # Format sorted results to be [(url, [(score, title, description)]), ...]
-    results = [(url, list(data['data'])) for url, data in sorted_results]    
+    results = [(url, list(data['data'])) for url, data in sorted_results]
 
     # Store the time taken to search
     time_taken = time.time() - start_time

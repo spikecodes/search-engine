@@ -24,9 +24,9 @@ def run_search():
             # st.write(description)
 
             encoded_url = requests.utils.requote_uri(abs_url)
-
             link_text = f"[{title}]({encoded_url})"
             st.subheader(link_text)
+            st.write(encoded_url)
             st.write(description)
 
 # for doc_url, doc_scores in top_20_results:
