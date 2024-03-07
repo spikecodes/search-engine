@@ -68,7 +68,6 @@ class SearchEngine:
 
         return results_dict
 
-
     def search(self, query):
         with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
             # Parse the JSON file which maps doc_id to URL of the webpage
@@ -77,12 +76,12 @@ class SearchEngine:
             # Rank documents based on the query
             scores = defaultdict(list)
             if query in self.index:
+                with open("docs_metadata.txt", 'r') as docs_metadata:
+                   titles_description = json.load(docs_metadata)
+
                 for doc_id, tfidf_pageRank in self.index[query].items():
                     doc_url = documents[doc_id]  # Resolve doc_id to the path
                     # scores[doc_url] += tfidf_pageRank
-
-                    with open("docs_metadata.txt", 'r') as docs_metadata:
-                        titles_description = json.load(docs_metadata)
 
                     # add title and , description to scores dictionary
                     title = titles_description[doc_id][-1][0]
@@ -95,7 +94,6 @@ class SearchEngine:
             # Sort the documents by score
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
             return results
-
 
 def run(query):
     # Initialize and populate the search engine
