@@ -55,3 +55,41 @@ python -m spacy download en_core_web_sm
 # Testing cases:
 - For lemmatization: run vs ran :  give same result
 - Case sensitive: IrviNe vs irvine
+
+# PageRank Algorithm explanation:
+Reference: https://en.wikipedia.org/wiki/PageRank
+**Updated comments in the code, so refer to the comment, and this may help you visualize.
+Basically, we have to find popular website where more links we get from other websites, the more important the website is.
+First, I extract domains (extract_domain function) to parse URL and their domain names
+Extracting Domain Names, then from add_document function, I extract outlinks, and if the link is valid, I store it to document_outlinks 
+Doucument_outlink will have something like:
+{
+     “doc_a” : {“doc_b”, “doc_c”},
+     “doc_b” : {“doc_c”},
+     “doc_c”: {“doc_a”}
+     “doc_d”: {} #let say this one doesn’t have any outlink
+}
+Then inside the calculate_pagerank_scores function, first create a map from doc_id to their index in the adjacency matrix.
+
+doc_id_to_index creates something like:
+{
+     “doc_a” : 0,
+     “doc_b” : 1,
+     “doc_c”:  2,
+     “doc_d”:  3,
+
+}
+Then creates adjacency matrix by using np.zeros, which will creates square matrix initialize with all zeros. Something like:
+[[0,0,0,0,]
+ [0,0,0,0,]
+ [0,0,0,0,]
+ [0,0,0,0,]]
+
+Then loop through document_outlinks to fill adjacency matrix based on outlinks, now it wil becomes:
+[[0,1,1,0,] #doc_a has outlink to doc_b and doc_c   #number of outgoing link: 2
+ [0,0,1,0,]  #doc_b has outlink to doc_c            #number of outgoing link: 1
+ [1,0,0,0,]  #doc_c has outlink to doc_a            #number of outgoing link: 1
+ [0,0,0,0,]] # doc_d had no outlink                 #number of outgoing link: 0
+
+When we initialize all the document’s score, it has to have all same value, and everything need to add up to 1, so we have to initiazlie to 1/number of total_docs
+Then we use pagerank equation to calculate the pagerank, and if the change in scores is smaller than epsilon, that means, we’ve converged, so we don’t have to iteratively calculate pagerank, so we stop.

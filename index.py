@@ -86,9 +86,6 @@ class InvertedIndex:
 
     def extract_domain(self, url):
         # Extracts the domain (netloc) from a given URL.
-        # - url (str): The URL from which to extract the domain.
-        # Returns:
-        # - str: The extracted domain if successful, None otherwise.
         try:
             parsed_url = urlparse(url)
             return parsed_url.netloc
@@ -99,7 +96,7 @@ class InvertedIndex:
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
         # Read the document and tokenize the text
-        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:            
+        with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
@@ -198,10 +195,10 @@ class InvertedIndex:
                 self.positions[term][doc_id] = positions  # store positions
 
             # Extract outlinks
-            outlinks = [link['href'] for link in soup.find_all('a', href=True)]
+            outlinks = [link['href'] for link in soup.find_all('a', href=True)] #Find all hyperlinks
             for outlink in outlinks:
                 domain = self.extract_domain(outlink)
-                if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
+                if domain:  # only keep valid URLs;
                     self.document_outlinks[doc_id].add(outlink)
 
     def calculate_idf(self, total_docs):
@@ -213,33 +210,46 @@ class InvertedIndex:
                 self.index[term][i] = (doc_id, round(score, 3))
 
     def calculate_pagerank_scores(self, total_docs):
-        # Initialization for PageRank
+        # Create mapping from doc_id to their index in adjacency matrix
         doc_id_to_index = {doc_id: i for i, doc_id in enumerate(self.document_outlinks)}
-        adjacency_matrix = np.zeros((total_docs, total_docs))
+        adjacency_matrix = np.zeros((total_docs, total_docs)) #reference: https://stackoverflow.com/questions/75293289/adjacency-matrix-using-numpy
 
         # Build the adjacency matrix based on outlinks
-        for doc_id, outlinks_set in self.document_outlinks.items():
-            doc_index = doc_id_to_index[doc_id]
-            for outlink in outlinks_set:
-                if outlink in doc_id_to_index:  # Check if outlink is within the indexed documents
-                    outlink_index = doc_id_to_index[outlink]
-                    adjacency_matrix[doc_index][outlink_index] = 1
+        for doc_id, outlinks_set in self.document_outlinks.items():  # iterate document and its set of outlink
+            doc_index = doc_id_to_index[doc_id]    #get matrix index for current document
+            for outlink in outlinks_set:           #iterate each outlink of current document
+                if outlink in doc_id_to_index:     # Check if outlink points to a document we indexed
+                    outlink_index = doc_id_to_index[outlink]  #get matrix index for outlink document
+                    adjacency_matrix[doc_index][outlink_index] = 1   #mark 1 to indicate link in the adjacency matrix
 
         # Calculate PageRank
-        damping_factor = 0.85
-        initial_scores = np.ones(total_docs) / total_docs
-        scores = initial_scores
-        epsilon = 1.0e-8
-        max_iterations = 15
+        damping_factor = 0.85  # when I search it, one of document says"Google uses a damping factor around 0.85"
+        initial_scores = np.ones(total_docs) / total_docs  #initialize all documents' score to 1/n
+        scores = initial_scores     #first start with initial scores
+        epsilon = 1.0e-8    #epsilon value got from searching
+        max_iterations = 15  #maximum number of iteration to perform, also got number 15 by searching
 
+        #reference: https://stackoverflow.com/questions/40200070/what-does-axis-0-do-in-numpys-sum-function
+        outgoing_link = np.sum(adjacency_matrix, axis=1)  #C(Pi) - from our slides
+        outgoing_link[outgoing_link == 0] = 1 # modify zeros in outgoing_link with 1 to avoid division by zero
+
+        # calculate new scores based on the previous iteration's score
+        # need to get sum of the pagerank score of all page by geting transpose of the matrix, since we need incoming link here
+        # reference: https://stackoverflow.com/questions/54968660/numpy-transposing-a-vector
+        # reference: https://stackoverflow.com/questions/5954603/transposing-a-1d-numpy-array
+        # pageRank equation from website and our slides week9-pagerank page7: https://www.mathworks.com/help/matlab/math/use-page-rank-algorithm-to-rank-websites.html
         for iteration in range(max_iterations):
-            new_scores = np.ones(total_docs) * (
-                    1 - damping_factor) / total_docs + damping_factor * adjacency_matrix.T.dot(scores)
+            #sum for PR(Pi)/C(Pi) for each page - from our slides
+            rank_contributions = adjacency_matrix.T.dot(scores / outgoing_link)
+            new_scores = (1 - damping_factor) / total_docs + damping_factor * rank_contributions
+
+            #convergence check Reference: https://arxiv.org/pdf/2108.02997.pdf
+            #reference: https://www.geeksforgeeks.org/calculate-the-euclidean-distance-using-numpy/
+            #if the change in score is smaller than epsilon, we converged, so stop iteration
             if np.linalg.norm(new_scores - scores) < epsilon:
                 break
-            scores = new_scores
+            scores = new_scores     #update the scores for the next iteration
         # Update self.pagerank_scores with the calculated PageRank scores
-
         for doc_id, index in doc_id_to_index.items():
             self.pagerank_scores[doc_id] = scores[index]
 
@@ -272,7 +282,7 @@ class InvertedIndex:
             return 0  # No proximity score if not all terms are found
 
         # Example: Calculate proximity as inverse of average distance between consecutive terms
-        min_distance = float('inf')
+        min_distance = float('inf')         #initialize to inifinity since we will find the minimum distance
         for i in range(len(term_positions) - 1):
             for pos1 in term_positions[i]:
                 for pos2 in term_positions[i + 1]:
