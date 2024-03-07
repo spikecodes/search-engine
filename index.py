@@ -103,15 +103,6 @@ class InvertedIndex:
             pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
 
-            #Track position for word position
-            tokens_with_positions = [(word.lower(), pos) for pos, word in enumerate(nltk.word_tokenize(texts)) if
-                                     word.isalnum() and word.lower() not in stop_words]
-            term_count_with_positions = defaultdict(lambda: {"count": 0, "positions": []})
-            for term, position in tokens_with_positions:
-                term_count_with_positions[term]["count"] += 1
-                term_count_with_positions[term]["positions"].append(position)
-
-
             #extract title
             title_element = soup.find('title')
             title = title_element.get_text()
@@ -154,8 +145,14 @@ class InvertedIndex:
             unique_doc_ids.add(doc_id)
 
             # Raw count of term in the document
-            term_count = Counter(bigrams + tokens)
             unique_words.update(tokens)
+
+            #Track position for word position
+            tokens_with_positions = [(word, pos) for pos, word in enumerate(tokens)]
+            monogram_count_with_positions = defaultdict(lambda: {"count": 0, "positions": []})
+            for term, position in tokens_with_positions:
+                monogram_count_with_positions[term]["count"] += 1
+                monogram_count_with_positions[term]["positions"].append(position)
 
             # ADDED CODE FOR HTML TAGS AS AN INDICATOR OF IMPORTANCE
             # Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
@@ -175,15 +172,16 @@ class InvertedIndex:
                         if term_importance[token] < weight:
                             term_importance[token] = weight
 
-            # Calculate score for each term and update index and doc lengths
-            # for term, count in term_count.items():
-            #     tf = count / len(tokens)
-            #     # Weight the score with the tf and the importance of the word
-            #     score = tf + term_importance.get(term, 0)
-            #     self.index[term].append((doc_id, score))
+            # Calculate score for each bigram and update index and doc length
+            bigram_count = Counter(bigrams)
+            for bigram, count in bigram_count.items():
+                tf = count / len(tokens)
+                # Weight the score with the tf and the importance of the word
+                score = tf + term_importance.get(bigram, 0)
+                self.index[bigram].append((doc_id, score))
 
             # Calculate score for each term and update index and doc length, and position, now calculate tf with position
-            for term, data in term_count_with_positions.items():
+            for term, data in monogram_count_with_positions.items():
                 count = data['count']  #count of the term in the document
                 positions = data['positions'] #list of positions where the term presents
                 tf = count / len(tokens)
@@ -198,9 +196,6 @@ class InvertedIndex:
                 domain = self.extract_domain(outlink)
                 if domain:  # Simple filter to keep only valid URLs; you might need a more sophisticated approach
                     self.document_outlinks[doc_id].add(outlink)
-            # print("docid ", doc_id)
-            # print("doc outlinks: ", self.document_outlinks[doc_id])
-
 
     def calculate_idf(self, total_docs):
         # Calculate IDF values for the index and update the index with TF-IDF values

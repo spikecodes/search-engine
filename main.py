@@ -18,16 +18,24 @@ def run_search():
         #st.write(f'title: {title}')
         #st.write("URL: <a href=\"{}\">{}</a>".format(doc_url, title))
         if not ("PUBLIC-IP" in doc_url or "PUBLIC_IP" in doc_url or "YOUR_IP" in doc_url):
-            abs_url = urljoin('https://', doc_url)
+            if "http" not in doc_url:
+              abs_url = "https://" + doc_url
+            else:
+              abs_url = doc_url
             # link_text = f"[{st.subheader(title)}]({abs_url})"
             # st.markdown(link_text, unsafe_allow_html=True)
             # st.write(description)
 
             encoded_url = requests.utils.requote_uri(abs_url)
 
-            link_text = f"[{title}]({encoded_url})"
+            # If link is over 100 chars, truncate it with an ellipsis
+            truncated_url = abs_url
+            if len(truncated_url) > 100:
+               truncated_url = truncated_url[:100] + '...'
+
+            link_text = f"[{title}](<{encoded_url}>)"
             st.subheader(link_text)
-            st.caption(encoded_url)
+            st.caption(f'<p style="color: gray">{truncated_url}</p>', unsafe_allow_html=True)
             st.write(description)
 
 # for doc_url, doc_scores in top_20_results:
