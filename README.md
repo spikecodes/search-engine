@@ -18,12 +18,10 @@ We handle multi-word queries by breaking them down into individual words and the
 For example, if a user searches "Irvine Computer Science":
 
 1. We break the query into individual words: ["Irvine", "Computer", "Science"]
-
 2. We search for each word in the index and rank the documents based on the number of "matches" for each word.
    a. Pages with Irvine, Computer, and Science will be ranked highest.
    b. Then, pages with Irvine and Computer (or any other combination of two words) will be ranked next.
    c. Finally, pages with only one of the words will be ranked last.
-
 3. We also factor in the PageRank algorithm to rank the search results.
 
 ## How did we go above and beyond?
@@ -56,7 +54,7 @@ python -m spacy download en_core_web_sm
 
 # Pending Tasks:
 
-- EC - +2 Word position
-- search more than 2 words???
-- should save 2-gram in different variable???
-- Testing???
+- EC - +2 Word position √
+- search more than 2 words √
+- should save 2-gram in different variable √
+- Testing √

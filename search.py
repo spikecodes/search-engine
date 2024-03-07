@@ -38,7 +38,7 @@ class SearchEngine:
     # Function to search and return results with count of matched words
     def search_and_count(self, query_words):
         results_dict = {}
-        # Search for individual words or pairs
+        # Search for individual words
         for word in query_words:
             for url, data_list in self.search(word):
                 if url in results_dict:
@@ -46,6 +46,16 @@ class SearchEngine:
                     results_dict[url]['data'].update(data_list)
                 else:
                     results_dict[url] = {'count': 1, 'data': set(data_list)}
+        
+        # Search for pairs of words
+        if len(query_words) == 2:
+            query_pair = f"{query_words[0]} {query_words[1]}"
+            for url, data_list in self.search(query_pair):
+                if url in results_dict:
+                    results_dict[url]['count'] += 2
+                    results_dict[url]['data'].update(data_list)
+                else:
+                    results_dict[url] = {'count': 2, 'data': set(data_list)}
 
         # Break longer queries into pairs if more than 2 words
         if len(query_words) > 2:
@@ -89,7 +99,6 @@ class SearchEngine:
 
                     #scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
                     scores[doc_url].append((tfidf_pageRank, title, description))
-
 
             # Sort the documents by score
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
