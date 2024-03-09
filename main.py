@@ -51,7 +51,7 @@ if gen_index_btn:
   with st.spinner(text="Generating index..."):
     index.generate()
 
-if exists("index.txt.zz") and exists("docs_metadata.txt"):
+if exists("index/index.txt.zz") and exists("docs_metadata.txt"):
     search.load_index()
 
     st.header('Search')

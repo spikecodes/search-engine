@@ -130,7 +130,6 @@ class InvertedIndex:
             if current_url in anchor_words:
                 texts += lemma(anchor_words[current_url])
 
-
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]
 
@@ -199,7 +198,7 @@ class InvertedIndex:
                 document_tf[term] = tf      #save tf for cosine similarity
 
             self.document_tfs[doc_id] = document_tf
-            with open('document_tfs.json', 'w') as f:
+            with open('index/document_tfs.json', 'w') as f:
                 json.dump(self.document_tfs, f)
 
             # Extract outlinks
@@ -324,7 +323,7 @@ class InvertedIndex:
         # Remove the default dictionary extra memory from the file
         file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace("'", '"')
 
-        print("Storing docs_metadata.txt")
+        print("Storing index/docs_metadata.txt")
         docs_metadata = json.dumps(titles_description)
         with open("docs_metadata.txt", 'w', encoding='UTF-8') as f:
             f.write(docs_metadata)
@@ -372,7 +371,7 @@ def generate():
         index.calculate_idf_and_pagerank(total_docs)
 
         # Store the index to a file
-        index.store_index('index.txt')
+        index.store_index('index/index.txt')
 
     print("Unique words: " + str(len(unique_words)))
     print("Unique Doc IDs: " + str(len(unique_doc_ids)))
