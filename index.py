@@ -343,7 +343,7 @@ class InvertedIndex:
 
         print("Storing index/docs_metadata.json")
         docs_metadata = json.dumps(titles_description)
-        with open("docs_metadata.json", 'w', encoding='UTF-8') as f:
+        with open("index/docs_metadata.json", 'w', encoding='UTF-8') as f:
             f.write(docs_metadata)
 
         print("Storing document TFS to file...")
