@@ -93,3 +93,10 @@ Then loop through document_outlinks to fill adjacency matrix based on outlinks, 
 
 When we initialize all the document’s score, it has to have all same value, and everything need to add up to 1, so we have to initiazlie to 1/number of total_docs
 Then we use pagerank equation to calculate the pagerank, and if the change in scores is smaller than epsilon, that means, we’ve converged, so we don’t have to iteratively calculate pagerank, so we stop.
+
+
+# Cosine similarity
+Reference:https://en.wikipedia.org/wiki/Cosine_similarity
+equation: cosine similarity = (A dot product B) / (magnitude(norm) A * magnitude(norm) B)
+"the attribute vectors A and B are usually the term frequency vectors of the documents."
+so I used tf to create A and B which is supposed to be query vector and document vector, then I used equation to find cosine similarity.

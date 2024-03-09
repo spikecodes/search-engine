@@ -5,11 +5,19 @@ import zlib
 from helper import lemma
 from urllib.parse import urljoin, urlparse
 from itertools import combinations
+import numpy as np
+from numpy.linalg import norm
+from collections import Counter
 
 class SearchEngine:
     def __init__(self):
         self.index = defaultdict(list)
         self.pagerank_scores = {}
+        self.document_tfs = {}
+
+    def load_document_tfs(self):
+        with open('document_tfs.json', 'r') as f:
+            self.document_tfs = json.load(f)
 
     def read_documents(self, filename):
         # Pulls the documents from index.txt and stores them in a list. If index.txt does not exist, throws an error.
@@ -79,9 +87,22 @@ class SearchEngine:
         return results_dict
 
     def search(self, query):
+
+        self.load_document_tfs() #load TF for cosine similarity
+
         with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
             # Parse the JSON file which maps doc_id to URL of the webpage
             documents = json.load(f)
+
+            #normalize query to calculate cosine similarity
+            query_terms = lemma(query).lower().split()
+            query_tf = Counter(query_terms)
+            total_terms = len(query_terms)
+            query_tf_normalized = {}
+            for term, count in query_tf.items():
+                normalized_frequency = count / total_terms
+                query_tf_normalized[term] = normalized_frequency
+
 
             # Rank documents based on the query
             scores = defaultdict(list)
@@ -91,14 +112,47 @@ class SearchEngine:
 
                 for doc_id, tfidf_pageRank in self.index[query].items():
                     doc_url = documents[doc_id]  # Resolve doc_id to the path
-                    # scores[doc_url] += tfidf_pageRank
 
                     # add title and , description to scores dictionary
                     title = titles_description[doc_id][-1][0]
                     description = titles_description[doc_id][-1][1]
 
-                    #scores[doc_url].append((tfidf_pageRank, index.titles[doc_id]))
-                    scores[doc_url].append((tfidf_pageRank, title, description))
+                    if doc_id in self.document_tfs:
+                        doc_tf = self.document_tfs[doc_id]
+                        # Assemble vectors for terms present in either the document or the query
+                        terms = set()
+                        for term in query_tf_normalized.keys():
+                            terms.add(term)
+                        for term in doc_tf.keys():
+                            terms.add(term)
+
+                        query_vector_values = []
+                        for term in terms:
+                            frequency = query_tf_normalized.get(term, 0)
+                            query_vector_values.append(frequency)
+                        query_vector = np.array(query_vector_values)
+
+                        doc_vector_values = []
+                        for term in terms:
+                            frequency + doc_tf.get(term, 0)
+                            doc_vector_values.append(frequency)
+                        doc_vector = np.array(doc_vector_values)
+
+                        # Compute cosine similarity
+                        dot_product = np.dot(query_vector, doc_vector)
+                        norm_query = norm(query_vector)
+                        norm_doc = norm(doc_vector)
+                        if norm_query == 0 or norm_doc == 0:
+                            cosine_similarity = 0   #avoid division by zero
+                        else:
+                            cosine_similarity = dot_product / (norm_query * norm_doc)
+
+                        if cosine_similarity > 0:
+                            scores[doc_id][0] += cosine_similarity
+                            scores[doc_id][1] = title
+                            scores[doc_id][2] = description
+                        else:
+                            scores[doc_url].append((tfidf_pageRank, title, description))
 
             # Sort the documents by score
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)

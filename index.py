@@ -62,6 +62,7 @@ class InvertedIndex:
         self.df = defaultdict(int)
         self.document_outlinks = defaultdict(set)  # Store outlinks as a set to avoid duplicates
         self.positions = defaultdict(lambda: defaultdict(list)) # store positions
+        self.document_tfs = {}
 
     def get_title(soup_content):
         title_element = soup_content.find('title')
@@ -176,6 +177,8 @@ class InvertedIndex:
                         if term_importance[token] < weight:
                             term_importance[token] = weight
 
+            document_tf = {}
+
             # Calculate score for each bigram and update index and doc length
             bigram_count = Counter(bigrams)
             for bigram, count in bigram_count.items():
@@ -193,6 +196,11 @@ class InvertedIndex:
                 score = tf + term_importance.get(term, 0)
                 self.index[term].append((doc_id, score))
                 self.positions[term][doc_id] = positions  # store positions
+                document_tf[term] = tf      #save tf for cosine similarity
+
+            self.document_tfs[doc_id] = document_tf
+            with open('document_tfs.json', 'w') as f:
+                json.dump(self.document_tfs, f)
 
             # Extract outlinks
             outlinks = [link['href'] for link in soup.find_all('a', href=True)] #Find all hyperlinks
@@ -252,27 +260,6 @@ class InvertedIndex:
         # Update self.pagerank_scores with the calculated PageRank scores
         for doc_id, index in doc_id_to_index.items():
             self.pagerank_scores[doc_id] = scores[index]
-
-    # def calculate_idf_and_pagerank(self, total_docs):
-    #     # First, call calculate_idf to update the index with TF-IDF values
-    #     self.calculate_idf(total_docs)
-    #
-    #     # Calculate PageRank scores
-    #     self.calculate_pagerank_scores(total_docs)
-    #
-    #     # Combine updated TF-IDF and PageRank scores
-    #     for term, postings in self.index.items():
-    #         for i, posting in enumerate(postings):
-    #             doc_id, tf_idf_score = posting  # Unpack the posting to get the TF-IDF score
-    #
-    #             # Retrieve the PageRank score for the document
-    #             pagerank_score = self.pagerank_scores.get(doc_id, 0)
-    #
-    #             # Combine TF-IDF and PageRank scores
-    #             final_score = tf_idf_score + pagerank_score  # tf_idf_score is used here directly
-    #             # print(f"Doc ID: {doc_id}, TF_idf: {tf_idf_score}, Pagerank: {pagerank_score}")
-    #             # Update the posting with the combined score
-    #             self.index[term][i] = (doc_id, round(final_score, 3))
 
     # implemented for word position
     def calculate_proximity_score(self, doc_id, query_terms):
@@ -393,3 +380,4 @@ def generate():
 
 if __name__ == "__main__":
     generate()
+
