@@ -11,9 +11,9 @@ from collections import Counter
 
 class SearchEngine:
     def __init__(self):
-        self.index = defaultdict(list)
-        self.pagerank_scores = {}
-        self.document_tfs = {}
+        self.index = defaultdict(list) # Format: {term: [(doc_id, score), ...], ...}
+        self.pagerank_scores = {} # Format: {doc_id: score, ...}
+        self.document_tfs = {} # Format: {doc_id: {term: count, ...}, ...}
 
         # Load the index once and persist it
         self.load_index('index/index.txt')
@@ -73,6 +73,7 @@ class SearchEngine:
         # Break longer queries into pairs if more than 2 words
         # Search for pairs of words and add 2 to count for each match
         if len(query_words) > 2:
+            # We only store bigrams and monograms so we must use 2 for the combinations() param
             for word1, word2 in combinations(query_words, 2):
                 query_pair = f"{word1} {word2}"
                 for url, data_list in self.search(query_pair):
@@ -91,24 +92,55 @@ class SearchEngine:
             results_dict[url]['data'] = set((score, title, desc) for title, (score, desc) in unique_data.items())
 
         return results_dict
+    
+    def compute_cosine_similarity(self, query_tf_normalized, doc_id):
+        doc_tf = self.document_tfs[doc_id]
+        # Assemble vectors for terms present in either the document or the query
+        terms = set()
+        for term in query_tf_normalized.keys():
+            terms.add(term)
+        for term in doc_tf.keys():
+            terms.add(term)
+
+        query_vector_values = []
+        for term in terms:
+            frequency = query_tf_normalized.get(term, 0)
+            query_vector_values.append(frequency)
+        query_vector = np.array(query_vector_values)
+
+        doc_vector_values = []
+        for term in terms:
+            frequency + doc_tf.get(term, 0)
+            doc_vector_values.append(frequency)
+        doc_vector = np.array(doc_vector_values)
+
+        # Compute cosine similarity
+        dot_product = np.dot(query_vector, doc_vector)
+        norm_query = norm(query_vector)
+        norm_doc = norm(doc_vector)
+        if norm_query == 0 or norm_doc == 0:
+            cosine_similarity = 0   #avoid division by zero
+        else:
+            cosine_similarity = dot_product / (norm_query * norm_doc)
+        
+        return cosine_similarity
 
     def search(self, query):
         with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
             # Parse the JSON file which maps doc_id to URL of the webpage
             documents = json.load(f)
 
-            #normalize query to calculate cosine similarity
-            query_terms = lemma(query).lower().split()
-            query_tf = Counter(query_terms)
+            # Normalize query to calculate cosine similarity
+            query_terms = lemma(query).lower().split() # Format: [term, ...]
+            query_tf = Counter(query_terms) # Format: {term: count, ...}
             total_terms = len(query_terms)
             query_tf_normalized = {}
             for term, count in query_tf.items():
                 normalized_frequency = count / total_terms
                 query_tf_normalized[term] = normalized_frequency
 
-
             # Rank documents based on the query
-            scores = defaultdict(list)
+            scores = defaultdict(list) # Format: {url: [(score, title, description), ...]}
             if query in self.index:
                 with open("index/docs_metadata.json", 'r') as docs_metadata:
                    titles_description = json.load(docs_metadata)
@@ -120,36 +152,11 @@ class SearchEngine:
                     title = titles_description[doc_id][-1][0]
                     description = titles_description[doc_id][-1][1]
 
+                    # Verify we have the TF metadata for this doc_id
                     if doc_id in self.document_tfs:
-                        doc_tf = self.document_tfs[doc_id]
-                        # Assemble vectors for terms present in either the document or the query
-                        terms = set()
-                        for term in query_tf_normalized.keys():
-                            terms.add(term)
-                        for term in doc_tf.keys():
-                            terms.add(term)
-
-                        query_vector_values = []
-                        for term in terms:
-                            frequency = query_tf_normalized.get(term, 0)
-                            query_vector_values.append(frequency)
-                        query_vector = np.array(query_vector_values)
-
-                        doc_vector_values = []
-                        for term in terms:
-                            frequency + doc_tf.get(term, 0)
-                            doc_vector_values.append(frequency)
-                        doc_vector = np.array(doc_vector_values)
-
                         # Compute cosine similarity
-                        dot_product = np.dot(query_vector, doc_vector)
-                        norm_query = norm(query_vector)
-                        norm_doc = norm(doc_vector)
-                        if norm_query == 0 or norm_doc == 0:
-                            cosine_similarity = 0   #avoid division by zero
-                        else:
-                            cosine_similarity = dot_product / (norm_query * norm_doc)
-
+                        cosine_similarity = self.compute_cosine_similarity(query_tf_normalized, doc_id)
+                        # Add the score to the list of scores for this URL
                         scores[doc_url].append((tfidf_pageRank + cosine_similarity, title, description))
 
             # Sort the documents by score

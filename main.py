@@ -15,16 +15,11 @@ def run_search():
 
   for doc_url, doc_scores in top_20_results:
       for i, (score, title, description) in enumerate(doc_scores):
-        #st.write(f'title: {title}')
-        #st.write("URL: <a href=\"{}\">{}</a>".format(doc_url, title))
         if not ("PUBLIC-IP" in doc_url or "PUBLIC_IP" in doc_url or "YOUR_IP" in doc_url):
             if "http" not in doc_url:
               abs_url = "https://" + doc_url
             else:
               abs_url = doc_url
-            # link_text = f"[{st.subheader(title)}]({abs_url})"
-            # st.markdown(link_text, unsafe_allow_html=True)
-            # st.write(description)
 
             encoded_url = requests.utils.requote_uri(abs_url)
 
@@ -53,7 +48,7 @@ if gen_index_btn:
     index.generate()
 
 # If index has already been generated, show search bar
-if exists("index/index.txt.zz") and exists("docs_metadata.json"):
+if exists("index/index.txt.zz") and exists("index/docs_metadata.json"):
     st.header('Search')
     query = st.text_input("Query", placeholder="computer science")
     search_button = st.button("Search")

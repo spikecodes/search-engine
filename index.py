@@ -28,14 +28,15 @@ anchor_words = defaultdict(str)
 
 TAG_WEIGHTS = {
     'title': 10,
-    'h1': 6,
-    'h2': 5,
-    'h3': 4,
-    'h4': 3,
-    'h5': 3,
+    'h1': 8,
+    'h2': 7,
+    'h3': 6,
+    'h4': 5,
+    'h5': 4,
     'h6': 3,
     'b': 2,
-    'strong': 2
+    'strong': 2,
+    'u': 2,
 }
 
 for tag, weight in TAG_WEIGHTS.items():
@@ -56,13 +57,16 @@ def lemma(texts):
 
 class InvertedIndex:
     def __init__(self):
-        # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, tf) tuples
+        # Initialize the inverted index as a dictionary of lists, where each list contains (doc_id, score) tuples
         self.index = defaultdict(list)
+        # Store PageRank scores for each document
         self.pagerank_scores = {}
-        self.df = defaultdict(int)
+        # A set of outlinks for each document
         self.document_outlinks = defaultdict(set)  # Store outlinks as a set to avoid duplicates
-        self.positions = defaultdict(lambda: defaultdict(list)) # store positions
-        self.document_tfs = {}
+        # Format: {doc_id: {term: [positions], term: [positions], ...}}
+        self.positions = defaultdict(lambda: defaultdict(list)) # store positions for proximity
+        # Format: {doc_id: {term: tf, term: tf, ...}}
+        self.document_tfs = {} # store document TFs for cosine similarity
 
     def get_title(soup_content):
         title_element = soup_content.find('title')
@@ -165,20 +169,40 @@ class InvertedIndex:
             # Resource: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
             term_importance = defaultdict(int)
 
+            # Weight each term with the importance of the HTML tag it is in
             for tag, weight in TAG_WEIGHTS.items():
                 elements = soup.find_all(tag)
                 for element in elements:
                     tag_texts = element.get_text(" ", strip=True)
-                    tag_tokens = [word.lower() for word in nltk.word_tokenize(tag_texts) if
+                    
+                    # Handle term importance of monograms (one-word tokens)
+                    tag_monograms = [word.lower() for word in nltk.word_tokenize(tag_texts) if
                                   word.isalnum() and word.lower() not in stop_words]
+                    # Handle term importance of bigrams (two-word tokens)
+                    tag_bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in list(nltk.ngrams(tag_tokens, 2))]
+
+                    tag_tokens = tag_monograms + tag_bigrams
+
+                    # Update term_importance with the weight of the tag
                     for token in tag_tokens:
-                        # print("token: ", token)
-                        # print("weight: ", weight)
-                        # print("term_imp[token]: ", term_importance[token])
-                        if term_importance[token] < weight:
+                        # If the weight of the tag is greater than the stored weight, update the weight
+                        if weight > term_importance.get(term, 0):
                             term_importance[token] = weight
 
+            # Store the document TF for use in cosine similarity
             document_tf = {}
+
+            # Calculate score for each term and update index and doc length, and position, now calculate tf with position
+            for term, data in monogram_count_with_positions.items():
+                count = data['count']  #count of the term in the document
+                positions = data['positions'] #list of positions where the term presents
+                tf = count / len(tokens)
+                
+                # Weight the score with the tf and the importance of the word
+                score = tf + term_importance.get(term, 0)
+                self.index[term].append((doc_id, score))
+                self.positions[term][doc_id] = positions  # store positions
+                document_tf[term] = tf # save tf for cosine similarity
 
             # Calculate score for each bigram and update index and doc length
             bigram_count = Counter(bigrams)
@@ -187,22 +211,12 @@ class InvertedIndex:
                 # Weight the score with the tf and the importance of the word
                 score = tf + term_importance.get(bigram, 0)
                 self.index[bigram].append((doc_id, score))
+                document_tf[term] = tf # save tf for cosine similarity
 
-            # Calculate score for each term and update index and doc length, and position, now calculate tf with position
-            for term, data in monogram_count_with_positions.items():
-                count = data['count']  #count of the term in the document
-                positions = data['positions'] #list of positions where the term presents
-                tf = count / len(tokens)
-                # Weight the score with the tf and the importance of the word
-                score = tf + term_importance.get(term, 0)
-                self.index[term].append((doc_id, score))
-                self.positions[term][doc_id] = positions  # store positions
-                document_tf[term] = tf      #save tf for cosine similarity
-
-            # Store document TFs so that we can calculate cosine similarity later
+            # Store globally document TFs so that we can calculate cosine similarity later
             self.document_tfs[doc_id] = document_tf
 
-            # Extract outlinks
+            # Extract outlinks for use in pagerank calculation
             outlinks = [link['href'] for link in soup.find_all('a', href=True)] #Find all hyperlinks
             for outlink in outlinks:
                 domain = self.extract_domain(outlink)
@@ -257,6 +271,7 @@ class InvertedIndex:
             if np.linalg.norm(new_scores - scores) < epsilon:
                 break
             scores = new_scores     #update the scores for the next iteration
+        
         # Update self.pagerank_scores with the calculated PageRank scores
         for doc_id, index in doc_id_to_index.items():
             self.pagerank_scores[doc_id] = scores[index]
@@ -283,7 +298,7 @@ class InvertedIndex:
             avg_distance = sum_distances / num_distances
             return 1 / (avg_distance + 1) # Add 1 to avoid division by zero
 
-    def calculate_idf_and_pagerank(self, total_docs, query_terms=None):
+    def set_index(self, total_docs, query_terms=None):
         # First, call calculate_idf to update the index with TF-IDF values
         self.calculate_idf(total_docs)
 
@@ -305,7 +320,7 @@ class InvertedIndex:
 
                 # Combine TF-IDF and PageRank scores, and proximity scores
                 final_score = tf_idf_score + pagerank_score + proximity_score  # tf_idf_score is used here directly
-                # print(f"Doc ID: {doc_id}, TF_idf: {tf_idf_score}, Pagerank: {pagerank_score}")
+
                 # Update the posting with the combined score
                 self.index[term][i] = (doc_id, round(final_score, 3))
 
@@ -376,7 +391,7 @@ def generate():
 
         # Calculate IDF and pagerank values for the index
         total_docs = len(documents)
-        index.calculate_idf_and_pagerank(total_docs)
+        index.set_index(total_docs)
 
         # Store the index to a file
         index.store_index('index/index.txt')

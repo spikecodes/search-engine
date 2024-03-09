@@ -7,7 +7,7 @@ For Project 3 of CS 121, we were tasked with creating a search engine. The assig
 #Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
 #Get Desciption resource: https://stackoverflow.com/questions/38009787/how-to-extract-meta-description-from-urls-using-python
 
-## How do we calculate word proximity?
+## How do we use word position?
 
 When the words are close together, the term is more relevant to the search.
 The proximity score is the inverse of the average distance between consecutive terms of the same word.
