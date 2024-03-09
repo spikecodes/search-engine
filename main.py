@@ -47,16 +47,17 @@ st.header('Index')
 
 gen_index_btn = st.button("Generate Index")
 
+# If user clicks generate index, generate the index
 if gen_index_btn:
   with st.spinner(text="Generating index..."):
     index.generate()
 
-if exists("index/index.txt.zz") and exists("docs_metadata.txt"):
-    search.load_index()
-
+# If index has already been generated, show search bar
+if exists("index/index.txt.zz") and exists("docs_metadata.json"):
     st.header('Search')
     query = st.text_input("Query", placeholder="computer science")
     search_button = st.button("Search")
+    # When they press enter or click the search bar, run the search
     if query or search_button:
         run_search()
 

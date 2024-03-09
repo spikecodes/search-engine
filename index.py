@@ -93,65 +93,67 @@ class InvertedIndex:
         except Exception as e:
             print(f"Error extracting domain from URL {url}: {e}")
             return None
+        
+    def handle_anchor_words(self, soup, doc_id):
+        # See README for more details
+        texts = ""
+
+        # Get anchor text from this doc_id that points to other docs
+        anchor_text = ""
+        for anchor_tag in soup.find_all('a'):
+            url = anchor_tag.get('href')
+            parsed_url = urlparse(url)
+            url = parsed_url.netloc + parsed_url.path
+            anchor_text = anchor_text + " " + anchor_tag.get_text(strip=True)
+            anchor_words[url] = anchor_text
+
+        # Load anchor words for this doc that other docs point to
+        current_url = urlparse(documents[doc_id])
+        current_url = current_url.netloc + current_url.path
+        if current_url in anchor_words:
+            texts += lemma(anchor_words[current_url])
+        
+        return texts
 
     def add_document(self, doc_id):
         print("ADDING DOCUMENT: " + doc_id)
         # Read the document and tokenize the text
         with open('webpages/WEBPAGES_RAW/' + doc_id, 'r', encoding='utf-8') as f:
+            # Reads the HTML content of the document
             html_content = f.read()
             soup = BeautifulSoup(html_content, 'html.parser')
             pre_texts = soup.get_text(" ", strip=True)
             texts = lemma(pre_texts)
 
-            #extract title
+            # Extract title and description for metadata
             title_element = soup.find('title')
             title = title_element.get_text()
             title = (title[:65] + '...') if len(title) > 65 else title
-            #extract description
             description = self.get_description(soup)
-            # print("description: ", description)
             titles_description[doc_id].append((title, description))
-            # print(" titles_description[doc_id] : ", titles_description[doc_id])
 
+            # Handle anchor words, as described in the README
+            texts += self.handle_anchor_words(soup, doc_id)
 
-            #get anchor text from this doc_id, A
-            anchor_text = ""
-            for anchor_tag in soup.find_all('a'):
-                url = anchor_tag.get('href')
-                parsed_url = urlparse(url)
-                url = parsed_url.netloc + parsed_url.path
-                anchor_text = anchor_text + " " + anchor_tag.get_text(strip=True)
-                anchor_words[url] = anchor_text
-
-            # add anchor text of this doc id before tokenizing
-            #anchor_text = self.get_anchor_text(soup)
-            current_url = urlparse(documents[doc_id])
-            current_url = current_url.netloc + current_url.path
-            if current_url in anchor_words:
-                texts += lemma(anchor_words[current_url])
-
+            # Tokenize the text into a list of alphanumeric lowercase words
             tokens = [word.lower() for word in nltk.word_tokenize(texts) if
                       word.isalnum() and word.lower() not in stop_words]
 
+            # If no tokens on page, exit and move to next document
             if len(tokens) == 0:
-                # If no tokens on page, exit
                 return
-            elif len(tokens) == 1:
-                # If only one token, use that
-                bigrams = [tokens[0]]
-            else:
-                # If more than one token, split into 2-grams
+            # If more than one token, split into 2-grams
+            elif len(tokens) > 1:
                 bigrams = list(nltk.ngrams(tokens, 2))
                 bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in bigrams]
 
             # Store document id in unique_doc_ids for analytics
             unique_doc_ids.add(doc_id)
 
-            # Raw count of term in the document
-            term_count = Counter(bigrams + tokens)
+            # Store unique words for analytics
             unique_words.update(tokens)
 
-            #Track position for word position
+            # Track position (element index) for word position
             tokens_with_positions = [(word, pos) for pos, word in enumerate(tokens)]
             monogram_count_with_positions = defaultdict(lambda: {"count": 0, "positions": []})
             for term, position in tokens_with_positions:
@@ -197,9 +199,8 @@ class InvertedIndex:
                 self.positions[term][doc_id] = positions  # store positions
                 document_tf[term] = tf      #save tf for cosine similarity
 
+            # Store document TFs so that we can calculate cosine similarity later
             self.document_tfs[doc_id] = document_tf
-            with open('index/document_tfs.json', 'w') as f:
-                json.dump(self.document_tfs, f)
 
             # Extract outlinks
             outlinks = [link['href'] for link in soup.find_all('a', href=True)] #Find all hyperlinks
@@ -260,25 +261,27 @@ class InvertedIndex:
         for doc_id, index in doc_id_to_index.items():
             self.pagerank_scores[doc_id] = scores[index]
 
-    # implemented for word position
+    # Calculate proximity score
     def calculate_proximity_score(self, doc_id, query_terms):
         term_positions = [self.positions[term][doc_id] for term in query_terms if
                           term in self.positions and doc_id in self.positions[term]]
         if not term_positions:
             return 0  # No proximity score if not all terms are found
-
-        # Example: Calculate proximity as inverse of average distance between consecutive terms
-        min_distance = float('inf')         #initialize to inifinity since we will find the minimum distance
-        for i in range(len(term_positions) - 1):
-            for pos1 in term_positions[i]:
-                for pos2 in term_positions[i + 1]:
-                    distance = abs(pos1 - pos2)
-                    if distance < min_distance:
-                        min_distance = distance
-
-        if min_distance == float('inf'):
+        
+        # When the words are close together, the term is more relevant to the search
+        # The proximity score is the inverse of the average distance between consecutive terms of the same word
+        # Average distance = sum of distances / number of distances
+        
+        sum_distances = 0
+        for positions in term_positions:
+            for i in range(len(positions) - 1):
+                sum_distances += positions[i + 1] - positions[i]
+        num_distances = len(positions) - 1
+        if num_distances == 0:
             return 0
-        return 1 / (min_distance + 1)  # Add 1 to avoid division by zero
+        else:
+            avg_distance = sum_distances / num_distances
+            return 1 / (avg_distance + 1) # Add 1 to avoid division by zero
 
     def calculate_idf_and_pagerank(self, total_docs, query_terms=None):
         # First, call calculate_idf to update the index with TF-IDF values
@@ -323,10 +326,14 @@ class InvertedIndex:
         # Remove the default dictionary extra memory from the file
         file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace("'", '"')
 
-        print("Storing index/docs_metadata.txt")
+        print("Storing index/docs_metadata.json")
         docs_metadata = json.dumps(titles_description)
-        with open("docs_metadata.txt", 'w', encoding='UTF-8') as f:
+        with open("docs_metadata.json", 'w', encoding='UTF-8') as f:
             f.write(docs_metadata)
+
+        print("Storing document TFS to file...")
+        with open('index/document_tfs.json', 'w') as f:
+            json.dump(self.document_tfs, f)
 
         print("Storing index to file...")
         # Store the file
@@ -341,18 +348,20 @@ class InvertedIndex:
 
         print("Done!")
 
-
 def generate():
     # Initialize and populate the inverted index (example)
     index = InvertedIndex()
 
+        # Parse the JSON file which maps doc_id to URL of the webpage
     with open('webpages/WEBPAGES_RAW/bookkeeping.json', 'r') as f:
         global documents
         documents = json.load(f)
         doc_ids = list(documents.keys())
 
+        # Use counter to only index a certain number of documents if NUM_DOCS_TO_INDEX is set
         counter = 0
 
+        # Helper function to add document to index
         def add_document(doc_id):
             nonlocal counter
             counter += 1
@@ -361,21 +370,20 @@ def generate():
                     return
             index.add_document(doc_id)
 
-        # Use ThreadPoolExecutor to run add_document on multiple documents in parallel
+        # (multi-threading) Use ThreadPoolExecutor to run add_document on multiple documents in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(add_document, doc_ids)
 
-        # Calculate IDF values for the index
+        # Calculate IDF and pagerank values for the index
         total_docs = len(documents)
-        # index.calculate_idf(total_docs)
         index.calculate_idf_and_pagerank(total_docs)
 
         # Store the index to a file
         index.store_index('index/index.txt')
 
+    # Output analytics
     print("Unique words: " + str(len(unique_words)))
     print("Unique Doc IDs: " + str(len(unique_doc_ids)))
-
 
 if __name__ == "__main__":
     generate()

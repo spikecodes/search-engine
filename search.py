@@ -15,15 +15,12 @@ class SearchEngine:
         self.pagerank_scores = {}
         self.document_tfs = {}
 
-        search_engine.read_documents('index/index.txt')
-        search_engine.load_document_tfs() # Load TF for cosine similarity
+        # Load the index once and persist it
+        self.load_index('index/index.txt')
+        self.load_index_tfs('index/document_tfs.json') # Load TF for cosine similarity
         print("Index loaded")
 
-    def load_document_tfs(self):
-        with open('index/document_tfs.json', 'r') as f:
-            self.document_tfs = json.load(f)
-
-    def read_documents(self, filename):
+    def load_index(self, filename):
         # Pulls the documents from index.txt and stores them in a list. If index.txt does not exist, throws an error.
         try:
             with open(filename + '.zz', 'rb') as f:
@@ -47,10 +44,14 @@ class SearchEngine:
             print('Error: index/index.txt.zz not found')
             exit(1)
 
+    def load_index_tfs(self, filename):
+        with open(filename, 'r') as f:
+            self.document_tfs = json.load(f)
+
     # Function to search and return results with count of matched words
     def search_and_count(self, query_words):
         results_dict = {}
-        # Search for individual words
+        # Search for individual words and add 1 to count for each match
         for word in query_words:
             for url, data_list in self.search(word):
                 if url in results_dict:
@@ -59,7 +60,7 @@ class SearchEngine:
                 else:
                     results_dict[url] = {'count': 1, 'data': set(data_list)}
         
-        # Search for pairs of words
+        # Search for pairs of words and add 2 to count for each match
         if len(query_words) == 2:
             query_pair = f"{query_words[0]} {query_words[1]}"
             for url, data_list in self.search(query_pair):
@@ -70,6 +71,7 @@ class SearchEngine:
                     results_dict[url] = {'count': 2, 'data': set(data_list)}
 
         # Break longer queries into pairs if more than 2 words
+        # Search for pairs of words and add 2 to count for each match
         if len(query_words) > 2:
             for word1, word2 in combinations(query_words, 2):
                 query_pair = f"{word1} {word2}"
@@ -108,7 +110,7 @@ class SearchEngine:
             # Rank documents based on the query
             scores = defaultdict(list)
             if query in self.index:
-                with open("index/docs_metadata.txt", 'r') as docs_metadata:
+                with open("index/docs_metadata.json", 'r') as docs_metadata:
                    titles_description = json.load(docs_metadata)
 
                 for doc_id, tfidf_pageRank in self.index[query].items():
