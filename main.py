@@ -28,7 +28,7 @@ def run_search():
             if len(truncated_url) > 100:
                truncated_url = truncated_url[:100] + '...'
 
-            link_text = f"[{title}](<{encoded_url}>)"
+            link_text = f"[{title.strip()}](<{encoded_url}>)"
             st.subheader(link_text)
             st.caption(f'<p style="color: gray">{truncated_url}</p>', unsafe_allow_html=True)
             st.write(description)
