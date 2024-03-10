@@ -1,3 +1,4 @@
+import os
 from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
@@ -179,7 +180,7 @@ class InvertedIndex:
                     tag_monograms = [word.lower() for word in nltk.word_tokenize(tag_texts) if
                                   word.isalnum() and word.lower() not in stop_words]
                     # Handle term importance of bigrams (two-word tokens)
-                    tag_bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in list(nltk.ngrams(tag_tokens, 2))]
+                    tag_bigrams = [f"{bigram[0]} {bigram[1]}" for bigram in list(nltk.ngrams(tag_monograms, 2))]
 
                     tag_tokens = tag_monograms + tag_bigrams
 
@@ -341,6 +342,10 @@ class InvertedIndex:
         # Remove the default dictionary extra memory from the file
         file_text = ''.join(file_lines).replace("defaultdict(<class'int'>,", '').replace("'", '"')
 
+        # If index/ folder does not exist, create it
+        if not os.path.exists("index"):
+            os.makedirs("index")
+
         print("Storing index/docs_metadata.json")
         docs_metadata = json.dumps(titles_description)
         with open("index/docs_metadata.json", 'w', encoding='UTF-8') as f:
@@ -388,6 +393,8 @@ def generate():
         # (multi-threading) Use ThreadPoolExecutor to run add_document on multiple documents in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(add_document, doc_ids)
+
+        print("Compiling index...")
 
         # Calculate IDF and pagerank values for the index
         total_docs = len(documents)

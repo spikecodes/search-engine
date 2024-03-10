@@ -163,9 +163,13 @@ class SearchEngine:
             results = sorted(scores.items(), key=lambda x: x[1][0][0], reverse=True)
             return results
 
-search_engine = SearchEngine()
+search_engine = None
 
 def run(query):
+    global search_engine
+    if not search_engine:
+        search_engine = SearchEngine()
+
     start_time = time.time()
     # normalized query
     query = ' '.join(word.lower() for word in query.split() if word.isalnum())
