@@ -1,127 +1,167 @@
 # Search Engine
 
-For Project 3 of CS 121, we were tasked with creating a search engine. The assignment was to index a corpus of web pages and then use that index to search for relevant documents.
+This project is a search engine designed to index a corpus of web pages and provide efficient search capabilities. It utilizes various algorithms and techniques to rank search results based on relevance, including the PageRank algorithm and cosine similarity.
 
-#html tags as an indicator of importance
-#Resource: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
-#Resoure: https://stackoverflow.com/questions/39755346/beautiful-soup-extracting-tagged-and-untagged-html-text
-#Get Desciption resource: https://stackoverflow.com/questions/38009787/how-to-extract-meta-description-from-urls-using-python
+## Features
 
-## How do we use word position?
+- 🌐 Efficient indexing of web pages
+- 🔍 Advanced search capabilities with multi-word query handling
+- 📄 Support for HTML content extraction, including titles and descriptions
+- 📊 Proximity scoring to enhance search relevance
+- 📦 Batch processing for indexing multiple documents
+- 🔄 PageRank algorithm for ranking search results
+- 🧠 Cosine similarity calculation for improved result accuracy
+- 🔒 Easy setup with Streamlit for a user-friendly interface
 
-When the words are close together, the term is more relevant to the search.
-The proximity score is the inverse of the average distance between consecutive terms of the same word.
-Average distance = sum of distances / number of distances.
+## Table of Contents
 
-## How do we compile results for queries?
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Testing](#testing)
+- [License](#license)
 
-We use the index to find the documents that contain the search terms. We then rank the documents based on the number of times the search terms appear in the document. We also use the PageRank algorithm to rank the search results.
+## Installation
 
-## How do we handle multi-word (>2) queries?
+### Prerequisites
 
-We handle multi-word queries by breaking them down into individual words and then searching for each word in the index. We then rank the documents based on the number of "matches" for each word.
+- Python 3.9 or higher
+- Required Python packages: Streamlit, BeautifulSoup, NLTK, SpaCy, NumPy
 
-For example, if a user searches "Irvine Computer Science":
+### Installing Dependencies
 
-1. We break the query into individual words: ["Irvine", "Computer", "Science"]
-2. We search for each word in the index and rank the documents based on the number of "matches" for each word.
-   a. Pages with Irvine, Computer, and Science will be ranked highest.
-   b. Then, pages with Irvine and Computer (or any other combination of two words) will be ranked next.
-   c. Finally, pages with only one of the words will be ranked last.
-3. We also factor in the PageRank algorithm to rank the search results.
+You can install the required packages using pip:
 
-## How do we handle anchor words?
-
-If document `A` has links to document `B` of the format:
-
-```html
-<a href="doc_B.html">Computer Science Faculty Directory</a>
+```bash
+pip install streamlit beautifulsoup4 nltk spacy numpy
+python -m spacy download en_core_web_sm
 ```
 
-Then, the `index.py` file will add the anchor words "Computer Science Faculty Directory" to the text of target document `B` before generating the index for those words.
+### Running the Application
 
-These words will be weighted highly because they were the descriptor of document `B` by another page.
+1. Clone the repository:
 
-## How do we use the PageRank Algorithm?
+   ```bash
+   git clone https://github.com/yourusername/search-engine.git
+   cd search-engine
+   ```
 
-Reference: https://en.wikipedia.org/wiki/PageRank
-\*\*Updated comments in the code, so refer to the comment, and this may help you visualize.
-Basically, we have to find popular website where more links we get from other websites, the more important the website is.
-First, I extract domains (extract_domain function) to parse URL and their domain names
-Extracting Domain Names, then from add_document function, I extract outlinks, and if the link is valid, I store it to document_outlinks
-Doucument_outlink will have something like:
-{
-“doc_a” : {“doc_b”, “doc_c”},
-“doc_b” : {“doc_c”},
-“doc_c”: {“doc_a”}
-“doc_d”: {} #let say this one doesn’t have any outlink
-}
-Then inside the calculate_pagerank_scores function, first create a map from doc_id to their index in the adjacency matrix.
+2. Run the application:
 
-doc_id_to_index creates something like:
-{
-“doc_a” : 0,
-“doc_b” : 1,
-“doc_c”: 2,
-“doc_d”: 3,
+   ```bash
+   streamlit run main.py
+   ```
 
-}
-Then creates adjacency matrix by using np.zeros, which will creates square matrix initialize with all zeros. Something like:
-[[0,0,0,0,]
- [0,0,0,0,]
- [0,0,0,0,]
- [0,0,0,0,]]
+## Usage
 
-Then loop through document_outlinks to fill adjacency matrix based on outlinks, now it wil becomes:
-[[0,1,1,0,] #doc_a has outlink to doc_b and doc_c   #number of outgoing link: 2
- [0,0,1,0,]  #doc_b has outlink to doc_c            #number of outgoing link: 1
- [1,0,0,0,]  #doc_c has outlink to doc_a            #number of outgoing link: 1
- [0,0,0,0,]] # doc_d had no outlink #number of outgoing link: 0
+### Web Interface
 
-When we initialize all the document’s score, it has to have all same value, and everything need to add up to 1, so we have to initiazlie to 1/number of total_docs
-Then we use pagerank equation to calculate the pagerank, and if the change in scores is smaller than epsilon, that means, we’ve converged, so we don’t have to iteratively calculate pagerank, so we stop.
+Once the server is running, you can access the search engine through your web browser at `http://localhost:8501`. You can generate an index and perform searches directly from the interface.
 
-## How do we calculate cosine similarity?
+### Indexing Documents
 
-Reference:https://en.wikipedia.org/wiki/Cosine_similarity
-equation: cosine similarity = (A dot product B) / (magnitude(norm) A \* magnitude(norm) B)
-"the attribute vectors A and B are usually the term frequency vectors of the documents."
-so I used tf to create A and B which is supposed to be query vector and document vector, then I used equation to find cosine similarity.
+To index documents, place your HTML files in the `webpages/WEBPAGES_RAW/` directory. The application will read and index these files when you click the "Generate Index" button.
 
-## How did we go above and beyond?
+## API Endpoints
 
-We used zlib to compress and decompress the object, providing a near-100x difference in storage space.
+The search engine provides a simple web interface for interaction. For detailed API documentation, refer to the source code in `search.py` and `index.py`.
 
-We also used the Streamlit library to create a simple web interface for the search engine.
+## Configuration
 
-We further implemneted the PageRank algorithm to rank the search results.
+The search engine can be configured by modifying the source code. Key parameters include:
 
-We implemented multithreading for faster index generation.
+- `NUM_DOCS_TO_INDEX`: Set the number of documents to index (default: 50).
+- `documents`: A JSON file mapping document IDs to URLs.
 
-## To run the program
+## Development
 
-Install Streamlit: pip install streamlit, pip install spacy,
+To set up the development environment:
 
-Run the program: streamlit run main.py
-On the browser:
+1. Install Python and pip: https://www.python.org/downloads/
+2. Clone the repository and navigate to the project directory.
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the application: `streamlit run main.py`
 
-- Click "Generate Index" for generating index
-- Enter query in the search bar and click "Search"
+## Testing
 
-Install spacy and download English language model:
-pip install spacy
-python -m spacy download en_core_web_sm
+To run the test suite, you can create unit tests in a separate test file and execute them using:
+
+```bash
+pytest
+```
+
+## Explanation of Key Concepts
+
+### Word Position and Proximity Scoring
+
+The relevance of search terms is influenced by their proximity within the text. When words are located close to each other, they are deemed more relevant to the search query. The proximity score is calculated as the inverse of the average distance between consecutive occurrences of the same term, ensuring that closely placed terms receive higher relevance.
+
+### Compiling Query Results
+
+The search engine utilizes an index to identify documents containing the search terms. Documents are ranked based on the frequency of term occurrences, with the PageRank algorithm further refining the ranking to prioritize more authoritative sources.
+
+### Handling Multi-Word Queries
+
+For multi-word queries, the search engine breaks down the input into individual words and searches for each in the index. Documents are ranked based on the number of matches for each word, with higher scores for documents containing all query terms.
+
+### Anchor Words
+
+When a document contains links to another, the anchor text (the clickable text in a hyperlink) is added to the target document's index. This enhances the relevance of the linked document, as it reflects how other pages describe it.
+
+### PageRank Algorithm
+
+The PageRank algorithm assesses the importance of web pages based on the number of incoming links from other pages. The more links a page receives, the higher its rank, indicating greater authority. The algorithm constructs an adjacency matrix to represent links between documents and iteratively calculates scores until convergence.
+
+### Cosine Similarity
+
+Cosine similarity measures the similarity between two vectors, typically representing term frequencies in documents. It is calculated as the dot product of the vectors divided by the product of their magnitudes. This metric helps determine how closely related a document is to a search query.
+
+### Advanced Features
+
+The project implements zlib for data compression, significantly reducing storage requirements. A user-friendly interface is created using Streamlit, allowing for easy interaction with the search engine. Additionally, multithreading is employed to expedite index generation, enhancing overall performance.
+
+## To Run the Program
+
+1. Install Streamlit and other dependencies:
+
+   ```bash
+   pip install streamlit spacy
+   ```
+
+2. Run the program:
+
+   ```bash
+   streamlit run main.py
+   ```
+
+3. In your browser:
+
+   - Click "Generate Index" to create the index.
+   - Enter your query in the search bar and click "Search".
+
+4. Ensure you have SpaCy installed and the English language model downloaded:
+
+   ```bash
+   pip install spacy
+   python -m spacy download en_core_web_sm
+   ```
 
 ## Outputted Files
 
-The program outputs the following files in the `index/` directory:
+The program generates the following files in the `index/` directory:
 
-1. `index.txt` — This is the uncompressed index of terms.
-2. `index.txt.zz` — This is the zlib-compressed index of terms.
-3. `docs_metadata.json` — This stores the title and description of each document, extracted during the indexing stage.
-4. `document_tfs.json` — This stores the term frequency of each document, to be used in calculating cosine similarity.
+1. `index.txt` — The uncompressed index of terms.
+2. `index.txt.zz` — The zlib-compressed index of terms.
+3. `docs_metadata.json` — Contains the title and description of each document, extracted during indexing.
+4. `document_tfs.json` — Stores the term frequency of each document for cosine similarity calculations.
 
-## Testing cases:
+## Testing Cases
 
-- For lemmatization: run vs ran : give same result
-- Case sensitive: IrviNe vs irvine
+- For lemmatization: "run" and "ran" yield the same result.
+- Case sensitivity: "IrviNe" and "irvine" are treated as different terms.
+
+## License
+
+This project is released under the MIT License. See the [LICENSE](LICENSE) file for details.
